@@ -1,0 +1,28 @@
+version '1.0'
+
+apply plugin: 'java'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  compile 'com.box:box-java-sdk:2.8.2'
+  compileOnly 'com.appian:connected-systems-core:1.0.2'
+  implementation 'com.appian:connected-systems-client:1.0.0'
+  testImplementation 'com.appian:connected-systems-core:1.0.2'
+}
+
+
+jar {
+  duplicatesStrategy = DuplicatesStrategy.FAIL
+  into('META-INF/lib') {
+    from(configurations.runtimeClasspath)
+  }
+
+  manifest {
+    attributes("Spring-Context": "*;publish-context:=false")
+  }
+}
+
+

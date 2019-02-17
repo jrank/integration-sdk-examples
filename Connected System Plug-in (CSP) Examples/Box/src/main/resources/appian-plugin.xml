@@ -1,0 +1,17 @@
+<appian-plugin name="Box Connected System" key="com.appian.sdk.csp.box">
+
+  <plugin-info>
+    <description>Connect to Box</description>
+    <vendor name="Appian" url="http://www.appian.com"/>
+    <version>1.0.0.0</version>
+    <application-version min="7.6.0.4"/>
+  </plugin-info>
+
+  <connected-system-template key="BoxPlatformConnectedSystem" name="BoxPlatformConnectedSystem"
+                             class="com.appian.sdk.csp.box.BoxPlatformConnectedSystem">
+
+    <integration-template key="BoxHelloWorldIntegration" name="BoxHelloWorldIntegration"
+                          class="com.appian.sdk.csp.box.BoxHelloWorldIntegration" />
+
+  </connected-system-template>
+</appian-plugin>
