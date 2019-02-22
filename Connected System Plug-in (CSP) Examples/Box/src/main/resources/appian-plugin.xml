@@ -11,7 +11,9 @@
                              class="com.appian.sdk.csp.box.BoxPlatformConnectedSystem">
 
     <integration-template key="BoxHelloWorldIntegration" name="BoxHelloWorldIntegration"
-                          class="com.appian.sdk.csp.box.BoxHelloWorldIntegration" />
+                          class="com.appian.sdk.csp.box.integration.BoxHelloWorldIntegration" />
+    <integration-template key="GetFolderInfo" name="GetFolderInfo"
+                          class="com.appian.sdk.csp.box.integration.GetFolderInfo" />
 
   </connected-system-template>
 </appian-plugin>

@@ -1,6 +1,7 @@
-package com.appian.sdk.csp.box;
+package com.appian.sdk.csp.box.integration;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
@@ -12,6 +13,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 
 @TemplateId(name="BoxHelloWorldIntegration")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
@@ -39,7 +41,7 @@ public class BoxHelloWorldIntegration extends SimpleIntegrationTemplate {
       SimpleConfiguration integrationConfiguration,
       SimpleConfiguration connectedSystemConfiguration,
       ExecutionContext executionContext) {
-    Map<String,Object> requestDiagnostic = new HashMap<>();
+    Map<String,Object> requestDiagnostic = new LinkedHashMap<>();
     BoxPlatformConnectedSystem.addRequestDiagnostics(requestDiagnostic, connectedSystemConfiguration, executionContext);
     String csValue = connectedSystemConfiguration.getValue(BoxPlatformConnectedSystem.ENTERPRISE_ID);
     String integrationValue = integrationConfiguration.getValue(INTEGRATION_PROP_KEY);
