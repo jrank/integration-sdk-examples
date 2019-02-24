@@ -2,8 +2,10 @@ package com.appian.sdk.csp.box.integration;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
@@ -17,17 +19,25 @@ import com.appian.connectedsystems.templateframework.sdk.diagnostics.Integration
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
+import com.appian.sdk.csp.box.objects.File;
 import com.appian.sdk.csp.box.objects.Folder;
 import com.box.sdk.BoxAPIException;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFolder;
+import com.box.sdk.BoxItem;
+import com.box.sdk.PartialCollection;
 
-@TemplateId(name="GetFolderInfo")
+@TemplateId(name="GetFolderItems")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
-public class GetFolderInfo extends SimpleIntegrationTemplate {
+public class GetFolderItems extends SimpleIntegrationTemplate {
 
   public static final String FOLDER_ID = "folderID";
-  public static final String FOLDER = "folder";
+  public static final String PAGING_INFO = "pagingInfo"; // Would be nice to have a paging info directly...
+  public static final String START_INDEX = "startIndex";
+  public static final String BATCH_SIZE = "batchSize";
+  public static final String TOTAL_COUNT = "totalCount"; // Would be nice to have datasubset directly...
+  public static final String ITEMS = "items";
+
 
   @Override
   protected SimpleConfiguration getConfiguration(
@@ -41,6 +51,18 @@ public class GetFolderInfo extends SimpleIntegrationTemplate {
         .label("Folder ID")
         .instructionText("The root folder of a Box account is always represented by the ID '0'.")
         .isRequired(true)
+        .isExpressionable(true)
+        .build(),
+      integerProperty(START_INDEX)
+        .label("Start Index")
+        .instructionText("Index where the current page begins. Use the same value as startIndex in a PagingInfo.")
+        .isRequired(false)
+        .isExpressionable(true)
+        .build(),
+      integerProperty(BATCH_SIZE)
+        .label("Batch Size")
+        .instructionText("Number of items to return at a time. Default is 100, maximum is 1000. Use the same value as batchSize in a PagingInfo.")
+        .isRequired(false)
         .isExpressionable(true)
         .build()
     );
@@ -60,6 +82,10 @@ public class GetFolderInfo extends SimpleIntegrationTemplate {
     // Get integration inputs
     String folderId = integrationConfiguration.getValue(FOLDER_ID);
     requestDiagnostic.put("Folder ID", folderId);
+    Integer startIndex = integrationConfiguration.getValue(START_INDEX);
+    requestDiagnostic.put("Start Index", startIndex);
+    Integer batchSize = integrationConfiguration.getValue(BATCH_SIZE);
+    requestDiagnostic.put("Batch Size", batchSize);
 
     long executeStart = System.currentTimeMillis();
 
@@ -72,14 +98,33 @@ public class GetFolderInfo extends SimpleIntegrationTemplate {
       // Get folder
       BoxFolder folder = new BoxFolder(conn, folderId);
 
-      // Map results
-      Map<String,Object> result = new HashMap<>();
-      result.put(FOLDER, Folder.toMap(folder.getInfo()));
+      // Get folder children
+      PartialCollection<BoxItem.Info> children = folder.getChildrenRange(startIndex, batchSize);
 
       long executeEnd = System.currentTimeMillis();
 
-      // TODO change to a better representation
-      responseDiagnostic.put("Folder", folder.toString());
+      Long totalCount = children.fullSize();
+      Long actualStartIndex = children.offset();
+      Long actualBatchSize = children.limit();
+
+      Collection<Map<String, Object>> items = new LinkedList<>();
+      for (BoxItem.Info info : children) {
+        if ("file".equals(info.getType())) {
+          items.add(File.toMap(info));
+        } else if ("folder".equals(info.getType())) {
+          items.add(Folder.toMap(info));
+        }
+        // TODO handle web links, others?
+      }
+
+      // Map results
+      Map<String,Object> result = new HashMap<>();
+      result.put(START_INDEX, actualStartIndex);
+      result.put(BATCH_SIZE, actualBatchSize);
+      result.put(TOTAL_COUNT, totalCount);
+      result.put(ITEMS, items);
+
+//      responseDiagnostic.put("Folder", folder.toString());
 
       IntegrationDesignerDiagnostic diagnostic = IntegrationDesignerDiagnostic.builder()
         .addExecutionTimeDiagnostic(executeEnd - executeStart)
@@ -104,7 +149,6 @@ public class GetFolderInfo extends SimpleIntegrationTemplate {
         error = IntegrationError.builder()
           .title("Box returned an error")
           .message(e.getMessage())
-          //          .detail(e.getCause() != null ? "Cause: " + e.getCause().getMessage() : null)
           .detail("See the Response tab for more details.")
           .build();
 
@@ -116,7 +160,6 @@ public class GetFolderInfo extends SimpleIntegrationTemplate {
         error = IntegrationError.builder()
           .title("An unexpected error occurred")
           .message(e.getMessage())
-//          .detail(e.getCause() != null ? "Cause: " + e.getCause().getMessage() : null)
           .detail("See the Response tab for more details.")
           .build();
 

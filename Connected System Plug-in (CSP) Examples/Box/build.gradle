@@ -7,7 +7,7 @@ repositories {
 }
 
 dependencies {
-  compile ('com.box:box-java-sdk:2.8.2') {
+  compile ('com.box:box-java-sdk:2.27.0') {
     exclude group: 'org.slf4j'
   }
   compileOnly 'com.appian:connected-systems-core:1.0.2'
@@ -25,6 +25,11 @@ jar {
   manifest {
     attributes("Spring-Context": "*;publish-context:=false")
   }
+}
+
+task copyJarToBin(type: Copy) {
+  from jar
+  into "/Users/jacob.rank/repo/ae/_admin/plugins"
 }
 
 
