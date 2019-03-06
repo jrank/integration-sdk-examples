@@ -2,10 +2,11 @@ package com.appian.sdk.csp.box.integration;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URL;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
@@ -19,13 +20,14 @@ import com.appian.connectedsystems.templateframework.sdk.diagnostics.Integration
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
-import com.appian.sdk.csp.box.objects.File;
-import com.appian.sdk.csp.box.objects.Folder;
+import com.box.sdk.BoxAPIConnection;
 import com.box.sdk.BoxAPIException;
+import com.box.sdk.BoxAPIRequest;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFolder;
-import com.box.sdk.BoxItem;
-import com.box.sdk.PartialCollection;
+import com.box.sdk.BoxJSONResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @TemplateId(name="GetFolderItems")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
@@ -37,6 +39,10 @@ public class GetFolderItems extends SimpleIntegrationTemplate {
   public static final String BATCH_SIZE = "batchSize";
   public static final String TOTAL_COUNT = "totalCount"; // Would be nice to have datasubset directly...
   public static final String ITEMS = "items";
+
+  private static final Integer DEFAULT_START_INDEX = 1;
+  private static final Integer DEFAULT_BATCH_SIZE = 100;
+  private static final Integer MAX_BATCH_SIZE = 1000;
 
   public static final String[] FIELDS = { "name", "description", "size", "status", "owned_by", "parent" };
 
@@ -96,27 +102,25 @@ public class GetFolderItems extends SimpleIntegrationTemplate {
       BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
         connectedSystemConfiguration, executionContext);
 
-      // Get folder
-      BoxFolder folder = new BoxFolder(conn, folderId);
-
-      // Get folder children
-      PartialCollection<BoxItem.Info> children = folder.getChildrenRange(startIndex, batchSize, FIELDS);
+      // Get folder item list as JSON
+      BoxJSONResponse response = getFolderItemsPaging(conn, folderId, startIndex, batchSize);
 
       long executeEnd = System.currentTimeMillis();
 
-      Long totalCount = children.fullSize();
-      Long actualStartIndex = children.offset();
-      Long actualBatchSize = children.limit();
+      String body = response.getJSON();
 
-      Collection<Map<String, Object>> items = new LinkedList<>();
-      for (BoxItem.Info info : children) {
-        if ("file".equals(info.getType())) {
-          items.add(File.toMap(info));
-        } else if ("folder".equals(info.getType())) {
-          items.add(Folder.toMap(info));
-        }
-        // TODO handle web links, others?
-      }
+      responseDiagnostic.put("Status Code", response.getResponseCode());
+      responseDiagnostic.put("Headers", response.getHeaders());
+      responseDiagnostic.put("Body", body);
+
+      ObjectMapper mapper = new ObjectMapper();
+      Map<String, Object> map = mapper.readValue(body, new TypeReference<Map<String, Object>>(){});
+
+      Long totalCount = Long.valueOf(map.get("total_count").toString());
+      Long actualStartIndex = Long.valueOf(map.get("offset").toString());
+      Long actualBatchSize = Long.valueOf(map.get("limit").toString());
+
+      Collection<Map<String, Object>> items = (List<Map<String, Object>>)map.get("entries");
 
       // Map results
       Map<String,Object> result = new HashMap<>();
@@ -124,8 +128,6 @@ public class GetFolderItems extends SimpleIntegrationTemplate {
       result.put(BATCH_SIZE, actualBatchSize);
       result.put(TOTAL_COUNT, totalCount);
       result.put(ITEMS, items);
-
-//      responseDiagnostic.put("Folder", folder.toString());
 
       IntegrationDesignerDiagnostic diagnostic = IntegrationDesignerDiagnostic.builder()
         .addExecutionTimeDiagnostic(executeEnd - executeStart)
@@ -182,5 +184,26 @@ public class GetFolderItems extends SimpleIntegrationTemplate {
         .withDiagnostic(diagnostic)
         .build();
     }
+  }
+
+  public BoxJSONResponse getFolderItemsPaging(BoxAPIConnection conn, String folderId, Integer startIndex, Integer batchSize) {
+    if (startIndex == null) {
+      startIndex = DEFAULT_START_INDEX;
+    }
+    if (batchSize == null) {
+      batchSize = DEFAULT_BATCH_SIZE;
+    }
+    if (batchSize > MAX_BATCH_SIZE) {
+      batchSize = MAX_BATCH_SIZE;
+    }
+    String query = "?offset=" + startIndex + "&limit=" + batchSize;
+
+    URL url = BoxFolder.GET_ITEMS_URL.buildWithQuery(conn.getBaseURL(), query, folderId);
+    BoxAPIRequest request = new BoxAPIRequest(conn, url, "GET");
+    return (BoxJSONResponse) request.send();
+  }
+
+  public void addResponseDiagnostics(Map<String,Object> diagnostics, BoxJSONResponse response) {
+
   }
 }
