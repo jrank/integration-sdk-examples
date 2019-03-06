@@ -16,6 +16,8 @@
                           class="com.appian.sdk.csp.box.integration.GetFolderInfo" />
     <integration-template key="GetFolderItems" name="GetFolderItems"
                           class="com.appian.sdk.csp.box.integration.GetFolderItems" />
+    <integration-template key="GetUser" name="GetUser"
+                          class="com.appian.sdk.csp.box.integration.GetUser" />
 
   </connected-system-template>
 </appian-plugin>

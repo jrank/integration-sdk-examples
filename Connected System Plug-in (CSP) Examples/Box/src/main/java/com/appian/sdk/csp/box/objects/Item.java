@@ -11,6 +11,10 @@ public class Item {
     this.info = info;
   }
 
+  public String getType() {
+    return info.getType();
+  }
+
   public String getId() {
     return info.getID();
   }
@@ -63,6 +67,7 @@ public class Item {
   public Map<String,Object> toMap() {
     Map<String,Object> map = new LinkedHashMap<>();
 
+    map.put("type", getType());
     map.put("id", getId());
     map.put("name", getName());
     map.put("description", getDescription());

@@ -24,6 +24,7 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
   public static final String PRIVATE_KEY = "privateKey";
   public static final String PRIVATE_KEY_PASSPHRASE = "passphrase";
   public static final String ENTERPRISE_ID = "enterpriseID";
+  public static final String APP_USER_ID = "appUserID";
   public static final String DEBUG = "debug";
 
   @Override
@@ -59,7 +60,11 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
         .build(),
       textProperty(ENTERPRISE_ID)
         .label("Enterprise ID")
-        .masked(true)
+        .isRequired(true)
+        .isImportCustomizable(true)
+        .build(),
+      textProperty(APP_USER_ID)
+        .label("App User ID")
         .isRequired(true)
         .isImportCustomizable(true)
         .build(),
@@ -97,6 +102,7 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
     }
     String passphrase = configuration.getValue(PRIVATE_KEY_PASSPHRASE);
     String enterpriseID = configuration.getValue(ENTERPRISE_ID);
+    String appUserID = configuration.getValue(APP_USER_ID);
 
 //    System.out.println("DEBUGGIN: " + privateKey);
 //    System.out.println("HASH: " + privateKey.hashCode());
@@ -114,7 +120,8 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
     IAccessTokenCache accessTokenCache = new InMemoryLRUAccessTokenCache(MAX_CACHE_ENTRIES);
 
     // Create new app enterprise connection object
-    return BoxDeveloperEditionAPIConnection.getAppEnterpriseConnection(boxConfig, accessTokenCache);
+//    return BoxDeveloperEditionAPIConnection.getAppEnterpriseConnection(boxConfig, accessTokenCache);
+    return BoxDeveloperEditionAPIConnection.getAppUserConnection(appUserID, boxConfig, accessTokenCache);
   }
 
   public static void addRequestDiagnostics(Map<String,Object> requestDiagnostic, SimpleConfiguration connectedSystemConfiguration,
@@ -129,5 +136,6 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
     requestDiagnostic.put("Private Key", debug ? connectedSystemConfiguration.getValue(PRIVATE_KEY) : "**********");
     requestDiagnostic.put("Private Key Passphrase", debug ? connectedSystemConfiguration.getValue(PRIVATE_KEY_PASSPHRASE) : "**********");
     requestDiagnostic.put("Enterprise ID", connectedSystemConfiguration.getValue(ENTERPRISE_ID));
+    requestDiagnostic.put("App User ID", connectedSystemConfiguration.getValue(APP_USER_ID));
   }
 }
