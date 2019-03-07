@@ -18,6 +18,8 @@
                           class="com.appian.sdk.csp.box.integration.GetFolderItems" />
     <integration-template key="GetUser" name="GetUser"
                           class="com.appian.sdk.csp.box.integration.GetUser" />
+    <integration-template key="CreateFolder" name="CreateFolder"
+                          class="com.appian.sdk.csp.box.integration.CreateFolder" />
 
   </connected-system-template>
 </appian-plugin>
