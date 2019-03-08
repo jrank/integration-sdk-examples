@@ -1,16 +1,12 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
-import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
@@ -18,7 +14,6 @@ import com.appian.connectedsystems.templateframework.sdk.diagnostics.Integration
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
-import com.box.sdk.BoxAPIException;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFolder;
 import com.box.sdk.BoxJSONRequest;
@@ -28,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @TemplateId(name="CreateFolder")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
-public class CreateFolder extends SimpleIntegrationTemplate {
+public class CreateFolder extends AbstractBoxIntegration {
 
   public static final String OPERATION_DESCRIPTION = "operationDescription";
   public static final String FOLDER_NAME = "folderName";
@@ -70,16 +65,13 @@ public class CreateFolder extends SimpleIntegrationTemplate {
     SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
-    // Setup request diagnostics
-    Map<String,Object> requestDiagnostic = new LinkedHashMap<>();
-    Map<String,Object> responseDiagnostic = new LinkedHashMap<>();
+    Map<String, Object> requestDiagnostic = new LinkedHashMap<>();
+    Map<String, Object> responseDiagnostic = new LinkedHashMap<>();
     BoxPlatformConnectedSystem.addRequestDiagnostics(requestDiagnostic, connectedSystemConfiguration, executionContext);
 
     // Get integration inputs
     String folderName = integrationConfiguration.getValue(FOLDER_NAME);
-//    requestDiagnostic.put("Folder Name", folderName);
     String parentFolderId = integrationConfiguration.getValue(PARENT_FOLDER_ID);
-//    requestDiagnostic.put("Parent Folder ID", parentFolderId);
 
     Long executeStart = null;
 
@@ -115,9 +107,10 @@ public class CreateFolder extends SimpleIntegrationTemplate {
       Long executeEnd = System.currentTimeMillis();
 
       responseDiagnostic.put("Status Code", response.getResponseCode());
-      for (Map.Entry<String,String> header : response.getHeaders().entrySet()){
-        responseDiagnostic.put(header.getKey(), header.getValue());
-      }
+//      for (Map.Entry<String,String> header : response.getHeaders().entrySet()){
+//        responseDiagnostic.put(header.getKey(), header.getValue());
+//      }
+      responseDiagnostic.put("Headers", response.getHeaders());
       responseDiagnostic.put("Body", response.getJSON());
 
       ObjectMapper mapper = new ObjectMapper();
@@ -138,61 +131,9 @@ public class CreateFolder extends SimpleIntegrationTemplate {
 
       Long executeEnd = System.currentTimeMillis();
 
-      IntegrationError error;
-
-      if (e instanceof BoxAPIException) {
-
-        BoxAPIException ex = (BoxAPIException)e;
-        error = IntegrationError.builder()
-          .title("Box returned an error")
-          .message(e.getMessage())
-          .detail("See the Response tab for more details.")
-          .build();
-
-        responseDiagnostic.put("Box Response Code", ex.getResponseCode());
-        responseDiagnostic.put("Box Response", ex.getResponse());
-
-      } else {
-
-        error = IntegrationError.builder()
-          .title("An unexpected error occurred")
-          .message(e.getMessage())
-          .detail("See the Response tab for more details.")
-          .build();
-
-      }
-
-      // Add the exception stacktrace to the response diagnostics
-      StringWriter stackTrace = new StringWriter();
-      e.printStackTrace(new PrintWriter(stackTrace));
-      responseDiagnostic.put("Exception", stackTrace.toString());
-
-      IntegrationDesignerDiagnostic.IntegrationDesignerDiagnosticBuilder builder = IntegrationDesignerDiagnostic.builder()
-        .addRequestDiagnostic(requestDiagnostic)
-        .addResponseDiagnostic(responseDiagnostic);
-      if (executeStart != null) {
-        builder.addExecutionTimeDiagnostic(executeEnd - executeStart);
-      }
-
-      return IntegrationResponse
-        .forError(error)
-        .withDiagnostic(builder.build())
-        .build();
+      return createExceptionResponse(e, executionContext, executeEnd - executeStart, requestDiagnostic, responseDiagnostic);
     }
   }
 
-//  public BoxJSONResponse createFolder(BoxAPIConnection conn, String folderName, String parentFolderId) {
-//    URL url = BoxFolder.CREATE_FOLDER_URL.build(conn.getBaseURL());
-//    BoxAPIRequest request = new BoxAPIRequest(conn, url, "POST");
-//    request.setBody();
-//    return (BoxJSONResponse) request.send();
-//  }
-//
-//  public void addResponseDiagnostics(Map<String,Object> diagnostics, BoxJSONResponse response) {
-//
-//  }
-//
-//  protected BoxAPIRequest createRequest(Map<String,Object> diagnostic) {
-//
-//  }
+
 }
