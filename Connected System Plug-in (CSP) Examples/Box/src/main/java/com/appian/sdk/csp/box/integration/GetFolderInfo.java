@@ -24,7 +24,7 @@ import com.box.sdk.BoxFolder;
 
 @TemplateId(name="GetFolderInfo")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
-public class GetFolderInfo extends SimpleIntegrationTemplate {
+public class GetFolderInfo extends AbstractBoxIntegration {
 
   public static final String FOLDER_ID = "folderID";
   public static final String FOLDER = "folder";
@@ -55,13 +55,14 @@ public class GetFolderInfo extends SimpleIntegrationTemplate {
     // Setup request diagnostics
     Map<String,Object> requestDiagnostic = new LinkedHashMap<>();
     Map<String,Object> responseDiagnostic = new LinkedHashMap<>();
-    BoxPlatformConnectedSystem.addRequestDiagnostics(requestDiagnostic, connectedSystemConfiguration, executionContext);
+    BoxPlatformConnectedSystem.addRequestDiagnostics(requestDiagnostic, connectedSystemConfiguration,
+      executionContext);
 
     // Get integration inputs
     String folderId = integrationConfiguration.getValue(FOLDER_ID);
     requestDiagnostic.put("Folder ID", folderId);
 
-    long executeStart = System.currentTimeMillis();
+    Long executeStart = System.currentTimeMillis();
 
     try {
 
@@ -87,56 +88,15 @@ public class GetFolderInfo extends SimpleIntegrationTemplate {
         .addResponseDiagnostic(responseDiagnostic)
         .build();
 
-      return IntegrationResponse
-        .forSuccess(result)
-        .withDiagnostic(diagnostic)
-        .build();
+      return IntegrationResponse.forSuccess(result).withDiagnostic(diagnostic).build();
 
     } catch (Exception e) {
 
-      long executeEnd = System.currentTimeMillis();
+      Long executeEnd = System.currentTimeMillis();
 
-      IntegrationError error;
+      return createExceptionResponse(e, executionContext, executeEnd - executeStart, requestDiagnostic,
+        responseDiagnostic);
 
-      if (e instanceof BoxAPIException) {
-
-        BoxAPIException ex = (BoxAPIException)e;
-        error = IntegrationError.builder()
-          .title("Box returned an error")
-          .message(e.getMessage())
-          //          .detail(e.getCause() != null ? "Cause: " + e.getCause().getMessage() : null)
-          .detail("See the Response tab for more details.")
-          .build();
-
-        responseDiagnostic.put("Box Response Code", ex.getResponseCode());
-        responseDiagnostic.put("Box Response", ex.getResponse());
-
-      } else {
-
-        error = IntegrationError.builder()
-          .title("An unexpected error occurred")
-          .message(e.getMessage())
-//          .detail(e.getCause() != null ? "Cause: " + e.getCause().getMessage() : null)
-          .detail("See the Response tab for more details.")
-          .build();
-
-      }
-
-      // Add the exception stacktrace to the response diagnostics
-      StringWriter stackTrace = new StringWriter();
-      e.printStackTrace(new PrintWriter(stackTrace));
-      responseDiagnostic.put("Exception", stackTrace.toString());
-
-      IntegrationDesignerDiagnostic diagnostic = IntegrationDesignerDiagnostic.builder()
-        .addExecutionTimeDiagnostic(executeEnd - executeStart)
-        .addRequestDiagnostic(requestDiagnostic)
-        .addResponseDiagnostic(responseDiagnostic)
-        .build();
-
-      return IntegrationResponse
-        .forError(error)
-        .withDiagnostic(diagnostic)
-        .build();
     }
   }
 }

@@ -1,7 +1,5 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.net.URL;
 import java.util.Collection;
 import java.util.HashMap;
@@ -9,10 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
-import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
@@ -21,7 +17,6 @@ import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTem
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.box.sdk.BoxAPIConnection;
-import com.box.sdk.BoxAPIException;
 import com.box.sdk.BoxAPIRequest;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFolder;
@@ -31,7 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @TemplateId(name="GetFolderItems")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
-public class GetFolderItems extends SimpleIntegrationTemplate {
+public class GetFolderItems extends AbstractBoxIntegration {
 
   public static final String FOLDER_ID = "folderID";
   public static final String PAGING_INFO = "pagingInfo"; // Would be nice to have a paging info directly...
@@ -94,7 +89,7 @@ public class GetFolderItems extends SimpleIntegrationTemplate {
     Integer batchSize = integrationConfiguration.getValue(BATCH_SIZE);
     requestDiagnostic.put("Batch Size", batchSize);
 
-    long executeStart = System.currentTimeMillis();
+    Long executeStart = System.currentTimeMillis();
 
     try {
 
@@ -142,47 +137,10 @@ public class GetFolderItems extends SimpleIntegrationTemplate {
 
     } catch (Exception e) {
 
-      long executeEnd = System.currentTimeMillis();
+      Long executeEnd = System.currentTimeMillis();
 
-      IntegrationError error;
+      return createExceptionResponse(e, executionContext, executeEnd - executeStart, requestDiagnostic, responseDiagnostic);
 
-      if (e instanceof BoxAPIException) {
-
-        BoxAPIException ex = (BoxAPIException)e;
-        error = IntegrationError.builder()
-          .title("Box returned an error")
-          .message(e.getMessage())
-          .detail("See the Response tab for more details.")
-          .build();
-
-        responseDiagnostic.put("Box Response Code", ex.getResponseCode());
-        responseDiagnostic.put("Box Response", ex.getResponse());
-
-      } else {
-
-        error = IntegrationError.builder()
-          .title("An unexpected error occurred")
-          .message(e.getMessage())
-          .detail("See the Response tab for more details.")
-          .build();
-
-      }
-
-      // Add the exception stacktrace to the response diagnostics
-      StringWriter stackTrace = new StringWriter();
-      e.printStackTrace(new PrintWriter(stackTrace));
-      responseDiagnostic.put("Exception", stackTrace.toString());
-
-      IntegrationDesignerDiagnostic diagnostic = IntegrationDesignerDiagnostic.builder()
-        .addExecutionTimeDiagnostic(executeEnd - executeStart)
-        .addRequestDiagnostic(requestDiagnostic)
-        .addResponseDiagnostic(responseDiagnostic)
-        .build();
-
-      return IntegrationResponse
-        .forError(error)
-        .withDiagnostic(diagnostic)
-        .build();
     }
   }
 

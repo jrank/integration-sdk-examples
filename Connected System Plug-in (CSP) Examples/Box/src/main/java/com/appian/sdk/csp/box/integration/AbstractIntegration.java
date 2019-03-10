@@ -7,13 +7,80 @@ import java.util.Map;
 import java.util.ResourceBundle;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
+import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
-import com.box.sdk.BoxAPIException;
 
 public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
+
+  @Override
+  protected SimpleConfiguration getConfiguration(
+    SimpleConfiguration integrationConfiguration,
+    SimpleConfiguration connectedSystemConfiguration,
+    PropertyPath propertyPath,
+    ExecutionContext executionContext) {
+
+    integrationConfiguration = getHeaderConfiguration(integrationConfiguration, connectedSystemConfiguration, propertyPath, executionContext);
+
+    integrationConfiguration = getMainConfiguration(integrationConfiguration, connectedSystemConfiguration, propertyPath, executionContext);
+
+    integrationConfiguration = getFooterConfiguration(integrationConfiguration, connectedSystemConfiguration, propertyPath, executionContext);
+
+    return integrationConfiguration;
+  }
+
+  protected SimpleConfiguration getHeaderConfiguration(
+    SimpleConfiguration integrationConfiguration,
+    SimpleConfiguration connectedSystemConfiguration,
+    PropertyPath propertyPath,
+    ExecutionContext executionContext) {
+
+    return integrationConfiguration;
+  }
+
+  protected SimpleConfiguration getMainConfiguration(
+    SimpleConfiguration integrationConfiguration,
+    SimpleConfiguration connectedSystemConfiguration,
+    PropertyPath propertyPath,
+    ExecutionContext executionContext) {
+
+    return integrationConfiguration;
+  }
+
+  protected SimpleConfiguration getFooterConfiguration(
+    SimpleConfiguration integrationConfiguration,
+    SimpleConfiguration connectedSystemConfiguration,
+    PropertyPath propertyPath,
+    ExecutionContext executionContext) {
+
+    return integrationConfiguration;
+  }
+
+  protected IntegrationResponse createSuccessResponse(
+    Map<String,Object> result,
+    ExecutionContext executionContext,
+    Long executeStart,
+    Long executeEnd,
+    Map<String,Object> requestDiagnostic,
+    Map<String,Object> responseDiagnostic) {
+
+    IntegrationDesignerDiagnostic diagnostic = null;
+    if (executionContext.isDiagnosticsEnabled()) {
+      diagnostic = IntegrationDesignerDiagnostic.builder()
+        .addExecutionTimeDiagnostic(executeEnd - executeStart)
+        .addRequestDiagnostic(requestDiagnostic)
+        .addResponseDiagnostic(responseDiagnostic)
+        .build();
+    }
+
+    return IntegrationResponse
+      .forSuccess(result)
+      .withDiagnostic(diagnostic)
+      .build();
+  }
 
   protected IntegrationResponse createExceptionResponse(Exception e, ExecutionContext executionContext, Long executionTime, Map<String, Object> requestDiagnostic, Map<String, Object> responseDiagnostic) {
     IntegrationError unlocalizedError = createExceptionError(e, executionContext, responseDiagnostic);
@@ -32,31 +99,6 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
       .forError(getLocalizedError(getExecutionBundle(executionContext), unlocalizedError))
       .withDiagnostic(diagnostic)
       .build();
-  }
-
-  private static final String BOX_ERROR_TITLE = "error.box.title";
-  protected IntegrationError createBoxExceptionError(Exception e, ExecutionContext executionContext, Map<String, Object> responseDiagnostic) {
-    if (e instanceof BoxAPIException) {
-
-      BoxAPIException ex = (BoxAPIException)e;
-      responseDiagnostic.put("Status Code", ex.getResponseCode());
-      //      for (Map.Entry<String, java.util.List<String>> header : ex.getHeaders().entrySet()) {
-      //        responseDiagnostic.put(header.getKey(), header.getValue());
-      //      }
-      responseDiagnostic.put("Headers", ex.getHeaders());
-      responseDiagnostic.put("Body", ex.getResponse());
-
-      return IntegrationError.builder()
-        .title(BOX_ERROR_TITLE)
-        .message(ex.getMessage())
-        .detail(DEFAULT_ERROR_DETAIL)
-        .build();
-
-    } else {
-
-      return createExceptionError(e, executionContext, responseDiagnostic);
-
-    }
   }
 
   private static final String DEFAULT_ERROR_TITLE = "error.default.title";

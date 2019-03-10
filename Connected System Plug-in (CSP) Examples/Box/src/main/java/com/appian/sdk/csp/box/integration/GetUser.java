@@ -1,15 +1,11 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
-import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
@@ -18,13 +14,12 @@ import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTem
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.appian.sdk.csp.box.objects.User;
-import com.box.sdk.BoxAPIException;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxUser;
 
 @TemplateId(name="GetUser")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
-public class GetUser extends SimpleIntegrationTemplate {
+public class GetUser extends AbstractBoxIntegration {
 
   public static final String USER_ID = "userID";
   public static final String USER = "user";
@@ -60,7 +55,7 @@ public class GetUser extends SimpleIntegrationTemplate {
     String userId = integrationConfiguration.getValue(USER_ID);
     requestDiagnostic.put("User ID", userId);
 
-    long executeStart = System.currentTimeMillis();
+    Long executeStart = System.currentTimeMillis();
 
     try {
 
@@ -93,47 +88,10 @@ public class GetUser extends SimpleIntegrationTemplate {
 
     } catch (Exception e) {
 
-      long executeEnd = System.currentTimeMillis();
+      Long executeEnd = System.currentTimeMillis();
 
-      IntegrationError error;
+      return createExceptionResponse(e, executionContext, executeEnd - executeStart, requestDiagnostic, responseDiagnostic);
 
-      if (e instanceof BoxAPIException) {
-
-        BoxAPIException ex = (BoxAPIException)e;
-        error = IntegrationError.builder()
-          .title("Box returned an error")
-          .message(e.getMessage())
-          .detail("See the Response tab for more details.")
-          .build();
-
-        responseDiagnostic.put("Box Response Code", ex.getResponseCode());
-        responseDiagnostic.put("Box Response", ex.getResponse());
-
-      } else {
-
-        error = IntegrationError.builder()
-          .title("An unexpected error occurred")
-          .message(e.getMessage())
-          .detail("See the Response tab for more details.")
-          .build();
-
-      }
-
-      // Add the exception stacktrace to the response diagnostics
-      StringWriter stackTrace = new StringWriter();
-      e.printStackTrace(new PrintWriter(stackTrace));
-      responseDiagnostic.put("Exception", stackTrace.toString());
-
-      IntegrationDesignerDiagnostic diagnostic = IntegrationDesignerDiagnostic.builder()
-        .addExecutionTimeDiagnostic(executeEnd - executeStart)
-        .addRequestDiagnostic(requestDiagnostic)
-        .addResponseDiagnostic(responseDiagnostic)
-        .build();
-
-      return IntegrationResponse
-        .forError(error)
-        .withDiagnostic(diagnostic)
-        .build();
     }
   }
 }
