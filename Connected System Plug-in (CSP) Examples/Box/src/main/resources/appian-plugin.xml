@@ -20,6 +20,8 @@
                           class="com.appian.sdk.csp.box.integration.GetUser" />
     <integration-template key="CreateFolder" name="CreateFolder"
                           class="com.appian.sdk.csp.box.integration.CreateFolder" />
+    <integration-template key="UploadFile" name="UploadFile"
+                          class="com.appian.sdk.csp.box.integration.UploadFile" />
 
   </connected-system-template>
 </appian-plugin>

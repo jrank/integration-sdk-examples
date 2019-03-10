@@ -41,6 +41,11 @@ public class GetUser extends AbstractBoxIntegration {
   }
 
   @Override
+  protected String getOperationDescription() {
+    return "Get information about a user.";
+  }
+
+  @Override
   protected IntegrationResponse execute(
     SimpleConfiguration integrationConfiguration,
     SimpleConfiguration connectedSystemConfiguration,
