@@ -23,6 +23,11 @@ public class BoxJSONRequestWithDiagnostics extends BoxJSONRequest {
 
   @Override
   public BoxAPIResponse send() {
+    if (!this.diagnostic.isEnabled()) {
+      // Just use the base class if diagnostics are disabled
+      return super.send();
+    }
+
     Long executionStartTime = System.currentTimeMillis();
 
     try {

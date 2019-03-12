@@ -1,6 +1,5 @@
 package com.appian.sdk.csp.box;
 
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -32,6 +31,11 @@ public class BoxMultipartRequestWithDiagnostics extends BoxMultipartRequest {
 
   @Override
   public BoxAPIResponse send() {
+    if (!this.diagnostic.isEnabled()) {
+      // Just use the base class if diagnostics are disabled
+      return super.send();
+    }
+
     Long executionStartTime = System.currentTimeMillis();
 
     try {
