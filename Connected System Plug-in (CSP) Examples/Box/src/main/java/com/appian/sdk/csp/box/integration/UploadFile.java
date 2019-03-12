@@ -107,7 +107,7 @@ public class UploadFile extends AbstractBoxIntegration {
       String attributes = new ObjectMapper().writeValueAsString(file);
       request.putField("attributes", attributes);
       // TODO: Use chunked upload for larger files
-      request.setFile(document.getInputStream(), fileName);
+      request.setFile(document);
 
       // Execute the request
       BoxJSONResponse response = (BoxJSONResponse) request.send();

@@ -1,13 +1,16 @@
 package com.appian.sdk.csp.box;
 
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.box.sdk.BoxAPIConnection;
 import com.box.sdk.BoxAPIResponse;
 import com.box.sdk.BoxDateFormat;
@@ -50,34 +53,33 @@ public class BoxMultipartRequestWithDiagnostics extends BoxMultipartRequest {
 
   @Override
   public void putField(String key, String value) {
-    this.parts.put(key, value);
+    StringBuilder part = new StringBuilder();
+    part.append("Content-Disposition: form-data; name=\"" + key + "\"\r\n");
+    part.append("\r\n");
+    part.append(value);
+    this.parts.put(key, part.toString());
     super.putField(key, value);
   }
 
   @Override
   public void putField(String key, Date value) {
-    this.parts.put(key, BoxDateFormat.format(value));
-    super.putField(key, value);
+    this.putField(key, BoxDateFormat.format(value));
   }
 
-  @Override
-  public void setFile(InputStream inputStream, String filename) {
-    // TODO: Add more detail about file part
-    this.parts.put("file", filename);
-    super.setFile(inputStream, filename);
-  }
-
-  @Override
-  public void setFile(InputStream inputStream, String filename, long fileSize) {
-    // TODO: Add more detail about file part
-    this.parts.put("file", filename);
-    super.setFile(inputStream, filename, fileSize);
+  public void setFile(Document document) throws UnsupportedEncodingException {
+    StringBuilder part = new StringBuilder();
+    part.append("Content-Disposition: form-data; name=\"file\"; filename=\"" + URLEncoder.encode(document.getFileName(), "UTF-8") + "\"\r\n");
+    part.append("Content-Type: application/octet-stream\r\n");
+    part.append("\r\n");
+    part.append("<File content not shown - " + document.getFileName() + " (ID: " + document.getId() + ")>");
+    this.parts.put("file", part.toString());
+    super.setFile(document.getInputStream(), document.getFileName(), document.getFileSize());
   }
 
   private static final String URL = "URL";
   private static final String METHOD = "Method";
   private static final String HEADERS = "Headers";
-  private static final String PARTS = "Multipart Parts";
+  private static final String BODY_PART = "Body Part: ";
   private static final String BODY = "Body";
   private static final String STATUS_CODE = "URL";
 
@@ -87,8 +89,10 @@ public class BoxMultipartRequestWithDiagnostics extends BoxMultipartRequest {
     requestDiagnostics.put(URL, this.getUrl().toString());
     requestDiagnostics.put(METHOD, this.getMethod());
     requestDiagnostics.put(HEADERS, getHeadersAsStrings(this.getHeaders()));
-    requestDiagnostics.put(PARTS, this.parts);
-    // TODO: break out parts to body?
+//    requestDiagnostics.put(PARTS, this.parts);
+    for (Map.Entry<String, Object> part : this.parts.entrySet()) {
+      requestDiagnostics.put(BODY_PART + part.getKey(), part.getValue());
+    }
   }
 
   protected void addResponseDiagnostics(BoxJSONResponse response) {
