@@ -2,22 +2,20 @@ package com.appian.sdk.csp.box.integration;
 
 import java.net.URL;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
-import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.BoxJSONRequestWithDiagnostics;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFolder;
-import com.box.sdk.BoxJSONRequest;
 import com.box.sdk.BoxJSONResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -59,27 +57,6 @@ public class CreateFolder extends AbstractBoxIntegration {
     config.setValue(OPERATION_DESCRIPTION, getOperationDescription());
 
     return config;
-
-    // SDK: Shouldn't be so hard to add properties in different methods
-//    List<PropertyDescriptor> properties = integrationConfiguration.getProperties();
-//    properties.add(textProperty(FOLDER_NAME)
-//      .label("Name")
-//      .instructionText("The desired name for the folder. Box supports folder names of 255 characters or less. Names cannot contain non-printable ASCII characters, \"/\" or \"\\\", names with trailing spaces, or the special names '.' and '..'.")
-//      .isRequired(true)
-//      .isExpressionable(true)
-//      .build()
-//    );
-//    properties.add(textProperty(PARENT_FOLDER_ID)
-//      .label("Parent Folder ID")
-//      .instructionText("The ID of the parent folder. The root folder of a Box account is always represented by the ID '0'.")
-//      .isRequired(true)
-//      .isExpressionable(true)
-//      .build()
-//    );
-//
-//    integrationConfiguration.setProperties(properties.toArray(new PropertyDescriptor[]{}));
-//
-//    return integrationConfiguration;
   }
 
   @Override
@@ -93,15 +70,13 @@ public class CreateFolder extends AbstractBoxIntegration {
     SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
-    Map<String, Object> requestDiagnostic = new LinkedHashMap<>();
-    Map<String, Object> responseDiagnostic = new LinkedHashMap<>();
-    BoxPlatformConnectedSystem.addRequestDiagnostics(requestDiagnostic, connectedSystemConfiguration, executionContext);
+    // TODO: Move to abstract base class?
+    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+    BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
 
     // Get integration inputs
     String folderName = integrationConfiguration.getValue(FOLDER_NAME);
     String parentFolderId = integrationConfiguration.getValue(PARENT_FOLDER_ID);
-
-    Long executeStart = null;
 
     try {
 
@@ -111,8 +86,7 @@ public class CreateFolder extends AbstractBoxIntegration {
 
       // Create the request
       URL url = BoxFolder.CREATE_FOLDER_URL.build(conn.getBaseURL());
-      String method = "POST";
-      BoxJSONRequest request = new BoxJSONRequest(conn, url, method);
+      BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(conn, url, "POST", diagnostics);
 
       Map<String, Object> parent = new HashMap<>();
       parent.put("id", parentFolderId);
@@ -122,32 +96,17 @@ public class CreateFolder extends AbstractBoxIntegration {
       String body = new ObjectMapper().writeValueAsString(folder);
       request.setBody(body);
 
-      // Log the request
-      requestDiagnostic.put("URL", url.toString());
-      requestDiagnostic.put("Method", method);
-      requestDiagnostic.put("Body", body);
-
-      executeStart = System.currentTimeMillis();
-
       // Execute the request
       BoxJSONResponse response = (BoxJSONResponse) request.send();
-
-      Long executeEnd = System.currentTimeMillis();
-
-      responseDiagnostic.put("Status Code", response.getResponseCode());
-      responseDiagnostic.put("Headers", response.getHeaders());
-      responseDiagnostic.put("Body", response.getJSON());
 
       ObjectMapper mapper = new ObjectMapper();
       Map<String, Object> result = mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
 
-      return createSuccessResponse(result, executionContext, executeStart, executeEnd, requestDiagnostic, responseDiagnostic);
+      return createSuccessResponse(result, executionContext, diagnostics);
 
     } catch (Exception e) {
 
-      Long executeEnd = System.currentTimeMillis();
-
-      return createExceptionResponse(e, executionContext, executeEnd - executeStart, requestDiagnostic, responseDiagnostic);
+      return createExceptionResponse(e, executionContext, diagnostics);
     }
   }
 }

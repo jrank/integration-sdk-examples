@@ -1,26 +1,23 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.net.URL;
 import java.util.Map;
 
-import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
-import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
-import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.BoxJSONRequestWithDiagnostics;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
-import com.appian.sdk.csp.box.objects.Folder;
-import com.box.sdk.BoxAPIException;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFolder;
+import com.box.sdk.BoxJSONResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @TemplateId(name="GetFolderInfo")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
@@ -57,17 +54,11 @@ public class GetFolderInfo extends AbstractBoxIntegration {
     SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
-    // Setup request diagnostics
-    Map<String,Object> requestDiagnostic = new LinkedHashMap<>();
-    Map<String,Object> responseDiagnostic = new LinkedHashMap<>();
-    BoxPlatformConnectedSystem.addRequestDiagnostics(requestDiagnostic, connectedSystemConfiguration,
-      executionContext);
+    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+    BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
 
     // Get integration inputs
     String folderId = integrationConfiguration.getValue(FOLDER_ID);
-    requestDiagnostic.put("Folder ID", folderId);
-
-    Long executeStart = System.currentTimeMillis();
 
     try {
 
@@ -75,33 +66,19 @@ public class GetFolderInfo extends AbstractBoxIntegration {
       BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
         connectedSystemConfiguration, executionContext);
 
-      // Get folder
-      BoxFolder folder = new BoxFolder(conn, folderId);
+      // Create the request
+      URL url = BoxFolder.FOLDER_INFO_URL_TEMPLATE.build(conn.getBaseURL(), folderId);
+      BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(conn, url, "GET", diagnostics);
+      BoxJSONResponse response = (BoxJSONResponse)request.send();
 
-      // Map results
-      Map<String,Object> result = new HashMap<>();
-      result.put(FOLDER, Folder.toMap(folder.getInfo()));
+      ObjectMapper mapper = new ObjectMapper();
+      Map<String, Object> result = mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
 
-      long executeEnd = System.currentTimeMillis();
-
-      // TODO change to a better representation
-      responseDiagnostic.put("Folder", folder.toString());
-
-      IntegrationDesignerDiagnostic diagnostic = IntegrationDesignerDiagnostic.builder()
-        .addExecutionTimeDiagnostic(executeEnd - executeStart)
-        .addRequestDiagnostic(requestDiagnostic)
-        .addResponseDiagnostic(responseDiagnostic)
-        .build();
-
-      return IntegrationResponse.forSuccess(result).withDiagnostic(diagnostic).build();
+      return createSuccessResponse(result, executionContext, diagnostics);
 
     } catch (Exception e) {
 
-      Long executeEnd = System.currentTimeMillis();
-
-      return createExceptionResponse(e, executionContext, executeEnd - executeStart, requestDiagnostic,
-        responseDiagnostic);
-
+      return createExceptionResponse(e, executionContext, diagnostics);
     }
   }
 }

@@ -62,15 +62,14 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
   protected IntegrationResponse createSuccessResponse(
     Map<String,Object> result,
     ExecutionContext executionContext,
-    Long executeStart,
-    Long executeEnd,
+    Long executionTime,
     Map<String,Object> requestDiagnostic,
     Map<String,Object> responseDiagnostic) {
 
     IntegrationDesignerDiagnostic diagnostic = null;
     if (executionContext.isDiagnosticsEnabled()) {
       diagnostic = IntegrationDesignerDiagnostic.builder()
-        .addExecutionTimeDiagnostic(executeEnd - executeStart)
+        .addExecutionTimeDiagnostic(executionTime)
         .addRequestDiagnostic(requestDiagnostic)
         .addResponseDiagnostic(responseDiagnostic)
         .build();
@@ -128,7 +127,7 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
   }
 
   protected String getLocalizedString(ResourceBundle bundle, String keyOrValue) {
-    if (bundle.containsKey(keyOrValue)) {
+    if (keyOrValue != null && bundle.containsKey(keyOrValue)) {
       return bundle.getString(keyOrValue);
     }
     return keyOrValue;

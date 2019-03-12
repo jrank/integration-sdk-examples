@@ -3,7 +3,6 @@ package com.appian.sdk.csp.box.integration;
 import java.net.URL;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,12 +11,11 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
-import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.BoxJSONRequestWithDiagnostics;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
-import com.box.sdk.BoxAPIConnection;
-import com.box.sdk.BoxAPIRequest;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFolder;
 import com.box.sdk.BoxJSONResponse;
@@ -81,20 +79,23 @@ public class GetFolderItems extends AbstractBoxIntegration {
     SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
-    // Setup request diagnostics
-    Map<String,Object> requestDiagnostic = new LinkedHashMap<>();
-    Map<String,Object> responseDiagnostic = new LinkedHashMap<>();
-    BoxPlatformConnectedSystem.addRequestDiagnostics(requestDiagnostic, connectedSystemConfiguration, executionContext);
+    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+    BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
 
     // Get integration inputs
     String folderId = integrationConfiguration.getValue(FOLDER_ID);
-    requestDiagnostic.put("Folder ID", folderId);
     Integer startIndex = integrationConfiguration.getValue(START_INDEX);
-    requestDiagnostic.put("Start Index", startIndex);
     Integer batchSize = integrationConfiguration.getValue(BATCH_SIZE);
-    requestDiagnostic.put("Batch Size", batchSize);
-
-    Long executeStart = System.currentTimeMillis();
+    if (startIndex == null) {
+      startIndex = DEFAULT_START_INDEX;
+    }
+    if (batchSize == null) {
+      batchSize = DEFAULT_BATCH_SIZE;
+    }
+    if (batchSize > MAX_BATCH_SIZE) {
+      batchSize = MAX_BATCH_SIZE;
+    }
+    String query = "?offset=" + startIndex + "&limit=" + batchSize;
 
     try {
 
@@ -102,19 +103,13 @@ public class GetFolderItems extends AbstractBoxIntegration {
       BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
         connectedSystemConfiguration, executionContext);
 
-      // Get folder item list as JSON
-      BoxJSONResponse response = getFolderItemsPaging(conn, folderId, startIndex, batchSize);
-
-      long executeEnd = System.currentTimeMillis();
-
-      String body = response.getJSON();
-
-      responseDiagnostic.put("Status Code", response.getResponseCode());
-      responseDiagnostic.put("Headers", response.getHeaders());
-      responseDiagnostic.put("Body", body);
+      // Create the request
+      URL url = BoxFolder.GET_ITEMS_URL.buildWithQuery(conn.getBaseURL(), query, folderId);
+      BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(conn, url, "GET", diagnostics);
+      BoxJSONResponse response = (BoxJSONResponse)request.send();
 
       ObjectMapper mapper = new ObjectMapper();
-      Map<String, Object> map = mapper.readValue(body, new TypeReference<Map<String, Object>>(){});
+      Map<String, Object> map = mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
 
       Long totalCount = Long.valueOf(map.get("total_count").toString());
       Long actualStartIndex = Long.valueOf(map.get("offset").toString());
@@ -129,44 +124,11 @@ public class GetFolderItems extends AbstractBoxIntegration {
       result.put(TOTAL_COUNT, totalCount);
       result.put(ITEMS, items);
 
-      IntegrationDesignerDiagnostic diagnostic = IntegrationDesignerDiagnostic.builder()
-        .addExecutionTimeDiagnostic(executeEnd - executeStart)
-        .addRequestDiagnostic(requestDiagnostic)
-        .addResponseDiagnostic(responseDiagnostic)
-        .build();
-
-      return IntegrationResponse
-        .forSuccess(result)
-        .withDiagnostic(diagnostic)
-        .build();
+      return createSuccessResponse(result, executionContext, diagnostics);
 
     } catch (Exception e) {
 
-      Long executeEnd = System.currentTimeMillis();
-
-      return createExceptionResponse(e, executionContext, executeEnd - executeStart, requestDiagnostic, responseDiagnostic);
-
+      return createExceptionResponse(e, executionContext, diagnostics);
     }
-  }
-
-  public BoxJSONResponse getFolderItemsPaging(BoxAPIConnection conn, String folderId, Integer startIndex, Integer batchSize) {
-    if (startIndex == null) {
-      startIndex = DEFAULT_START_INDEX;
-    }
-    if (batchSize == null) {
-      batchSize = DEFAULT_BATCH_SIZE;
-    }
-    if (batchSize > MAX_BATCH_SIZE) {
-      batchSize = MAX_BATCH_SIZE;
-    }
-    String query = "?offset=" + startIndex + "&limit=" + batchSize;
-
-    URL url = BoxFolder.GET_ITEMS_URL.buildWithQuery(conn.getBaseURL(), query, folderId);
-    BoxAPIRequest request = new BoxAPIRequest(conn, url, "GET");
-    return (BoxJSONResponse) request.send();
-  }
-
-  public void addResponseDiagnostics(Map<String,Object> diagnostics, BoxJSONResponse response) {
-
   }
 }

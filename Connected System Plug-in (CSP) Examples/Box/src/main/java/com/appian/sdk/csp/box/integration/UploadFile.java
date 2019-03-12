@@ -2,7 +2,6 @@ package com.appian.sdk.csp.box.integration;
 
 import java.net.URL;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -11,15 +10,15 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
-import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.BoxMultipartRequestWithDiagnostics;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFolder;
 import com.box.sdk.BoxJSONResponse;
-import com.box.sdk.BoxMultipartRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -66,34 +65,6 @@ public class UploadFile extends AbstractBoxIntegration {
     config.setValue(OPERATION_DESCRIPTION, getOperationDescription());
 
     return config;
-
-
-    // SDK: Shouldn't be so hard to add properties in different methods
-//    List<PropertyDescriptor> properties = integrationConfiguration.getProperties();
-//    properties.add(documentProperty(DOCUMENT)
-//      .label("Document")
-//      .instructionText("The document to upload.")
-//      .isRequired(true)
-//      .isExpressionable(true)
-//      .build()
-//    );
-//    properties.add(textProperty(FILE_NAME)
-//      .label("Name")
-//      .instructionText("The desired name for the file. If blank the name of the document will be used. Box supports file names of 255 characters or less. Names cannot contain non-printable ASCII characters, \"/\" or \"\\\", names with trailing spaces, or the special names '.' and '..'.")
-//      .isExpressionable(true)
-//      .build()
-//    );
-//    properties.add(textProperty(PARENT_FOLDER_ID)
-//      .label("Parent Folder ID")
-//      .instructionText("The ID of the parent folder. The root folder of a Box account is always represented by the ID '0'.")
-//      .isRequired(true)
-//      .isExpressionable(true)
-//      .build()
-//    );
-
-//    integrationConfiguration.setProperties(properties.toArray(new PropertyDescriptor[]{}));
-
-//    return integrationConfiguration;
   }
 
   @Override
@@ -107,9 +78,8 @@ public class UploadFile extends AbstractBoxIntegration {
     SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
-    Map<String, Object> requestDiagnostic = new LinkedHashMap<>();
-    Map<String, Object> responseDiagnostic = new LinkedHashMap<>();
-    BoxPlatformConnectedSystem.addRequestDiagnostics(requestDiagnostic, connectedSystemConfiguration, executionContext);
+    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+    BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
 
     // Get integration inputs
     Document document = integrationConfiguration.getValue(DOCUMENT);
@@ -119,8 +89,6 @@ public class UploadFile extends AbstractBoxIntegration {
     }
     String parentFolderId = integrationConfiguration.getValue(PARENT_FOLDER_ID);
 
-    Long executeStart = null;
-
     try {
 
       // Get client from connected system
@@ -129,8 +97,7 @@ public class UploadFile extends AbstractBoxIntegration {
 
       // Create the request
       URL url = BoxFolder.UPLOAD_FILE_URL.build(conn.getBaseUploadURL());
-      String method = "POST";
-      BoxMultipartRequest request = new BoxMultipartRequest(conn, url);
+      BoxMultipartRequestWithDiagnostics request = new BoxMultipartRequestWithDiagnostics(conn, url, diagnostics);
 
       Map<String, Object> parent = new HashMap<>();
       parent.put("id", parentFolderId);
@@ -142,35 +109,18 @@ public class UploadFile extends AbstractBoxIntegration {
       // TODO: Use chunked upload for larger files
       request.setFile(document.getInputStream(), fileName);
 
-      // Log the request
-      requestDiagnostic.put("URL", url.toString());
-      requestDiagnostic.put("Method", method);
-      requestDiagnostic.put("Attributes", attributes);
-      // TODO: Standardize this string representation (i18n?)
-      requestDiagnostic.put("File", "Binary content not shown for document, " + fileName + " (" + document.getFileSize() + ")");
-
-      executeStart = System.currentTimeMillis();
-
       // Execute the request
       BoxJSONResponse response = (BoxJSONResponse) request.send();
-
-      Long executeEnd = System.currentTimeMillis();
-
-      responseDiagnostic.put("Status Code", response.getResponseCode());
-      responseDiagnostic.put("Headers", response.getHeaders());
-      responseDiagnostic.put("Body", response.getJSON());
 
       ObjectMapper mapper = new ObjectMapper();
       Map<String, Object> result = mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
       result = ((List<Map<String, Object>>)result.get("entries")).get(0);
 
-      return createSuccessResponse(result, executionContext, executeStart, executeEnd, requestDiagnostic, responseDiagnostic);
+      return createSuccessResponse(result, executionContext, diagnostics);
 
     } catch (Exception e) {
 
-      Long executeEnd = System.currentTimeMillis();
-
-      return createExceptionResponse(e, executionContext, executeEnd - executeStart, requestDiagnostic, responseDiagnostic);
+      return createExceptionResponse(e, executionContext, diagnostics);
     }
   }
 }
