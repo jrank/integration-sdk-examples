@@ -1,6 +1,5 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.net.URL;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -14,13 +13,9 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
-import com.appian.sdk.csp.box.BoxJSONRequestWithDiagnostics;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
+import com.appian.sdk.csp.box.BoxService;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
-import com.box.sdk.BoxFolder;
-import com.box.sdk.BoxJSONResponse;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @TemplateId(name="GetFolderItems")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
@@ -84,6 +79,7 @@ public class GetFolderItems extends AbstractBoxIntegration {
 
     // Get integration inputs
     String folderId = integrationConfiguration.getValue(FOLDER_ID);
+    // TODO: Should paging management go in service or in integration?
     Integer startIndex = integrationConfiguration.getValue(START_INDEX);
     Integer batchSize = integrationConfiguration.getValue(BATCH_SIZE);
     if (startIndex == null) {
@@ -95,7 +91,6 @@ public class GetFolderItems extends AbstractBoxIntegration {
     if (batchSize > MAX_BATCH_SIZE) {
       batchSize = MAX_BATCH_SIZE;
     }
-    String query = "?offset=" + startIndex + "&limit=" + batchSize;
 
     try {
 
@@ -103,28 +98,24 @@ public class GetFolderItems extends AbstractBoxIntegration {
       BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
         connectedSystemConfiguration, executionContext);
 
-      // Create the request
-      URL url = BoxFolder.GET_ITEMS_URL.buildWithQuery(conn.getBaseURL(), query, folderId);
-      BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(conn, url, "GET", diagnostics);
-      BoxJSONResponse response = (BoxJSONResponse)request.send();
+      BoxService service = new BoxService(conn, diagnostics);
 
-      ObjectMapper mapper = new ObjectMapper();
-      Map<String, Object> map = mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
+      Map<String, Object> result = service.getFolderItems(folderId, startIndex, batchSize);
 
-      Long totalCount = Long.valueOf(map.get("total_count").toString());
-      Long actualStartIndex = Long.valueOf(map.get("offset").toString());
-      Long actualBatchSize = Long.valueOf(map.get("limit").toString());
+      // TODO: Should paging management go in service or in integration?
+      Long totalCount = Long.valueOf(result.get("total_count").toString());
+      Long actualStartIndex = Long.valueOf(result.get("offset").toString());
+      Long actualBatchSize = Long.valueOf(result.get("limit").toString());
 
-      Collection<Map<String, Object>> items = (List<Map<String, Object>>)map.get("entries");
+      Collection<Map<String, Object>> items = (List<Map<String, Object>>)result.get("entries");
 
-      // Map results
-      Map<String,Object> result = new HashMap<>();
-      result.put(START_INDEX, actualStartIndex);
-      result.put(BATCH_SIZE, actualBatchSize);
-      result.put(TOTAL_COUNT, totalCount);
-      result.put(ITEMS, items);
+      Map<String,Object> datasubset = new HashMap<>();
+      datasubset.put(START_INDEX, actualStartIndex);
+      datasubset.put(BATCH_SIZE, actualBatchSize);
+      datasubset.put(TOTAL_COUNT, totalCount);
+      datasubset.put(ITEMS, items);
 
-      return createSuccessResponse(result, executionContext, diagnostics);
+      return createSuccessResponse(datasubset, executionContext, diagnostics);
 
     } catch (Exception e) {
 

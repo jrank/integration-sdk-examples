@@ -67,7 +67,7 @@ public class GetUser extends AbstractBoxIntegration {
 
       // Create the request
       URL url = BoxUser.USER_URL_TEMPLATE.build(conn.getBaseURL(), userId);
-      BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(conn, url, "GET", diagnostics);
+      BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(conn, url, "GET");
       BoxJSONResponse response = (BoxJSONResponse)request.send();
 
       ObjectMapper mapper = new ObjectMapper();

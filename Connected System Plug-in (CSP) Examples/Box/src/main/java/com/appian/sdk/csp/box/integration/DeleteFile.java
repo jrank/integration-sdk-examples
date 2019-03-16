@@ -1,6 +1,6 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.util.Map;
+import java.util.LinkedHashMap;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
@@ -14,11 +14,11 @@ import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.appian.sdk.csp.box.BoxService;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 
-@TemplateId(name="GetFolderInfo")
-@IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
-public class GetFolderInfo extends AbstractBoxIntegration {
+@TemplateId(name="DeleteFile")
+@IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
+public class DeleteFile extends AbstractBoxIntegration {
 
-  public static final String FOLDER_ID = "folderID";
+  public static final String FILE_ID = "fileId";
 
   @Override
   protected SimpleConfiguration getConfiguration(
@@ -27,19 +27,28 @@ public class GetFolderInfo extends AbstractBoxIntegration {
     PropertyPath propertyPath,
     ExecutionContext executionContext) {
 
-    return integrationConfiguration.setProperties(
-      textProperty(FOLDER_ID)
-        .label("Folder ID")
-        .instructionText("The root folder of a Box account is always represented by the ID '0'.")
+    SimpleConfiguration config = integrationConfiguration.setProperties(
+      // SDK: Operation description should be shown somewhere by default, even better in the create dialog!
+      textProperty(OPERATION_DESCRIPTION)
+        .isReadOnly(true)
+        .build(),
+      textProperty(FILE_ID)
+        .label("File ID")
+        .instructionText("The file ID to delete")
         .isRequired(true)
         .isExpressionable(true)
         .build()
     );
+
+    // SDK: Would like to set this fixed, default value when creating the property
+    config.setValue(OPERATION_DESCRIPTION, getOperationDescription());
+
+    return config;
   }
 
   @Override
   protected String getOperationDescription() {
-    return "Get information about a folder.";
+    return "Discards a file to the trash. Depending on the enterprise settings for this user, the item will either be actually deleted from Box or moved to the trash.";
   }
 
   @Override
@@ -48,11 +57,12 @@ public class GetFolderInfo extends AbstractBoxIntegration {
     SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
+    // TODO: Move to abstract base class?
     BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
     BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
 
     // Get integration inputs
-    String folderId = integrationConfiguration.getValue(FOLDER_ID);
+    String fileId = integrationConfiguration.getValue(FILE_ID);
 
     try {
 
@@ -62,9 +72,9 @@ public class GetFolderInfo extends AbstractBoxIntegration {
 
       BoxService service = new BoxService(conn, diagnostics);
 
-      Map<String, Object> result = service.getFolderInfo(folderId);
+      service.deleteFile(fileId);
 
-      return createSuccessResponse(result, executionContext, diagnostics);
+      return createSuccessResponse(new LinkedHashMap<>(), executionContext, diagnostics);
 
     } catch (Exception e) {
 

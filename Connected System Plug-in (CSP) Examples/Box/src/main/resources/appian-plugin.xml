@@ -22,6 +22,8 @@
                           class="com.appian.sdk.csp.box.integration.CreateFolder" />
     <integration-template key="UploadFile" name="UploadFile"
                           class="com.appian.sdk.csp.box.integration.UploadFile" />
+    <integration-template key="DeleteFile" name="DeleteFile"
+                          class="com.appian.sdk.csp.box.integration.DeleteFile" />
 
   </connected-system-template>
 </appian-plugin>

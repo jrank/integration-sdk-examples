@@ -1,7 +1,5 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.net.URL;
-import java.util.HashMap;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -12,13 +10,9 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
-import com.appian.sdk.csp.box.BoxJSONRequestWithDiagnostics;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
+import com.appian.sdk.csp.box.BoxService;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
-import com.box.sdk.BoxFolder;
-import com.box.sdk.BoxJSONResponse;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @TemplateId(name="CreateFolder")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -84,23 +78,9 @@ public class CreateFolder extends AbstractBoxIntegration {
       BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
         connectedSystemConfiguration, executionContext);
 
-      // Create the request
-      URL url = BoxFolder.CREATE_FOLDER_URL.build(conn.getBaseURL());
-      BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(conn, url, "POST", diagnostics);
+      BoxService service = new BoxService(conn, diagnostics);
 
-      Map<String, Object> parent = new HashMap<>();
-      parent.put("id", parentFolderId);
-      Map<String, Object> folder = new HashMap<>();
-      folder.put("name", folderName);
-      folder.put("parent", parent);
-      String body = new ObjectMapper().writeValueAsString(folder);
-      request.setBody(body);
-
-      // Execute the request
-      BoxJSONResponse response = (BoxJSONResponse) request.send();
-
-      ObjectMapper mapper = new ObjectMapper();
-      Map<String, Object> result = mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
+      Map<String, Object> result = service.createFolder(parentFolderId, folderName);
 
       return createSuccessResponse(result, executionContext, diagnostics);
 

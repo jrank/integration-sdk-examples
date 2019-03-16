@@ -1,8 +1,5 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.net.URL;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -14,13 +11,9 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
-import com.appian.sdk.csp.box.BoxMultipartRequestWithDiagnostics;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
+import com.appian.sdk.csp.box.BoxService;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
-import com.box.sdk.BoxFolder;
-import com.box.sdk.BoxJSONResponse;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @TemplateId(name="UploadFile")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -95,26 +88,9 @@ public class UploadFile extends AbstractBoxIntegration {
       BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
         connectedSystemConfiguration, executionContext);
 
-      // Create the request
-      URL url = BoxFolder.UPLOAD_FILE_URL.build(conn.getBaseUploadURL());
-      BoxMultipartRequestWithDiagnostics request = new BoxMultipartRequestWithDiagnostics(conn, url, diagnostics);
+      BoxService service = new BoxService(conn, diagnostics);
 
-      Map<String, Object> parent = new HashMap<>();
-      parent.put("id", parentFolderId);
-      Map<String, Object> file = new HashMap<>();
-      file.put("name", fileName);
-      file.put("parent", parent);
-      String attributes = new ObjectMapper().writeValueAsString(file);
-      request.putField("attributes", attributes);
-      // TODO: Use chunked upload for larger files
-      request.setFile(document);
-
-      // Execute the request
-      BoxJSONResponse response = (BoxJSONResponse) request.send();
-
-      ObjectMapper mapper = new ObjectMapper();
-      Map<String, Object> result = mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
-      result = ((List<Map<String, Object>>)result.get("entries")).get(0);
+      Map<String, Object> result = service.uploadFile(parentFolderId, document.getInputStream(), fileName, Long.valueOf(document.getFileSize()), Long.valueOf(document.getId()));
 
       return createSuccessResponse(result, executionContext, diagnostics);
 
