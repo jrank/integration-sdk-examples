@@ -1,5 +1,7 @@
 package com.appian.sdk.csp.box.integration;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
@@ -62,10 +64,7 @@ public abstract class AbstractBoxIntegration extends AbstractIntegration {
 
       BoxAPIException ex = (BoxAPIException)e;
       responseDiagnostic.put("Status Code", ex.getResponseCode());
-      //      for (Map.Entry<String, java.util.List<String>> header : ex.getHeaders().entrySet()) {
-      //        responseDiagnostic.put(header.getKey(), header.getValue());
-      //      }
-      responseDiagnostic.put("Headers", ex.getHeaders());
+      responseDiagnostic.put("Headers", getFlattenedHeaders(ex.getHeaders()));
       responseDiagnostic.put("Body", ex.getResponse());
 
       return IntegrationError.builder()
@@ -85,5 +84,11 @@ public abstract class AbstractBoxIntegration extends AbstractIntegration {
     return "resources";
   }
 
-
+  protected Map<String, Object> getFlattenedHeaders(Map<String, List<String>> headers) {
+    Map<String, Object> flattenedHeaders = new LinkedHashMap<>();
+    for (Map.Entry<String,List<String>> entry : headers.entrySet()) {
+      flattenedHeaders.put(entry.getKey(), String.join(";", entry.getValue()));
+    }
+    return flattenedHeaders;
+  }
 }
