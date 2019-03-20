@@ -14,6 +14,7 @@ import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFile;
 import com.box.sdk.BoxFolder;
 import com.box.sdk.BoxJSONResponse;
+import com.box.sdk.BoxUser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -95,6 +96,20 @@ public class BoxService {
     BoxAPIRequestWithDiagnostics request = new BoxAPIRequestWithDiagnostics(this.connection, url, "DELETE");
 
     send(request);
+  }
+
+  public Map<String, Object> getEnterpriseUsers() throws IOException {
+    // TODO: Should paging management go in service or in integration?
+    Long offset = 1L;
+    Long limit = 100L;
+    String query = "?offset=" + offset + "&limit=" + limit;
+
+    URL url = BoxUser.USERS_URL_TEMPLATE.buildWithQuery(this.connection.getBaseURL(), query);
+    BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(this.connection, url, "GET");
+    BoxJSONResponse response = (BoxJSONResponse)send(request);
+
+    ObjectMapper mapper = new ObjectMapper();
+    return mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
   }
 
   protected BoxAPIResponse send(BoxAPIRequest request) {
