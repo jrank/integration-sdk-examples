@@ -150,32 +150,4 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
     }
     return this.executionBundle;
   }
-
-
-  private Map<String, Object> requestDiagnostic;
-  private Map<String, Object> responseDiagnostic;
-
-  protected Map<String, Object> getRequestDiagnostic() {
-    if (this.requestDiagnostic == null) {
-      this.requestDiagnostic = new LinkedHashMap<>();
-    }
-    return this.requestDiagnostic;
-  }
-
-  protected Map<String, Object> getResponseDiagnostic() {
-    if (this.responseDiagnostic == null) {
-      this.responseDiagnostic = new LinkedHashMap<>();
-    }
-    return this.responseDiagnostic;
-  }
-
-  protected void addRequestDiagnostic(String key, Object value) {
-    getRequestDiagnostic().put(key, value);
-  }
-
-  protected void addResponseDiagnostic(String key, Object value) {
-    getResponseDiagnostic().put(key, value);
-  }
-
-
 }
