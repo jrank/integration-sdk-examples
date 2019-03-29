@@ -2,17 +2,16 @@ package com.appian.sdk.csp.box.integration;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
-import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.LocalizableIntegrationError;
 
 public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
 
@@ -32,7 +31,7 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
     return integrationConfiguration;
   }
 
-  protected SimpleConfiguration getHeaderConfiguration(
+  SimpleConfiguration getHeaderConfiguration(
     SimpleConfiguration integrationConfiguration,
     SimpleConfiguration connectedSystemConfiguration,
     PropertyPath propertyPath,
@@ -41,7 +40,7 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
     return integrationConfiguration;
   }
 
-  protected SimpleConfiguration getMainConfiguration(
+  SimpleConfiguration getMainConfiguration(
     SimpleConfiguration integrationConfiguration,
     SimpleConfiguration connectedSystemConfiguration,
     PropertyPath propertyPath,
@@ -50,7 +49,7 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
     return integrationConfiguration;
   }
 
-  protected SimpleConfiguration getFooterConfiguration(
+  SimpleConfiguration getFooterConfiguration(
     SimpleConfiguration integrationConfiguration,
     SimpleConfiguration connectedSystemConfiguration,
     PropertyPath propertyPath,
@@ -59,7 +58,7 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
     return integrationConfiguration;
   }
 
-  protected IntegrationResponse createSuccessResponse(
+  IntegrationResponse createSuccessResponse(
     Map<String,Object> result,
     ExecutionContext executionContext,
     Long executionTime,
@@ -81,8 +80,8 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
       .build();
   }
 
-  protected IntegrationResponse createExceptionResponse(Exception e, ExecutionContext executionContext, Long executionTime, Map<String, Object> requestDiagnostic, Map<String, Object> responseDiagnostic) {
-    IntegrationError unlocalizedError = createExceptionError(e, executionContext, responseDiagnostic);
+  IntegrationResponse createExceptionResponse(Exception e, ExecutionContext executionContext, Long executionTime, Map<String, Object> requestDiagnostic, Map<String, Object> responseDiagnostic) {
+    LocalizableIntegrationError error = createExceptionError(e, executionContext, responseDiagnostic);
 
     IntegrationDesignerDiagnostic diagnostic = null;
     if (executionContext.isDiagnosticsEnabled()) {
@@ -90,12 +89,12 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
         .addRequestDiagnostic(requestDiagnostic)
         .addResponseDiagnostic(responseDiagnostic)
         .addExecutionTimeDiagnostic(executionTime)
-        .addErrorDiagnostic(getLocalizedError(getDesignerBundle(executionContext), unlocalizedError))
+        .addErrorDiagnostic(error.localize(getDesignerBundle(executionContext)))
         .build();
     }
 
     return IntegrationResponse
-      .forError(getLocalizedError(getExecutionBundle(executionContext), unlocalizedError))
+      .forError(error.localize(getExecutionBundle(executionContext)))
       .withDiagnostic(diagnostic)
       .build();
   }
@@ -103,7 +102,7 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
   private static final String DEFAULT_ERROR_TITLE = "error.default.title";
   private static final String DEFAULT_ERROR_DETAIL = "error.default.detail";
   private static final String EXCEPTION_STACKTRACE = "Exception";
-  protected IntegrationError createExceptionError(Exception e, ExecutionContext executionContext, Map<String, Object> responseDiagnostic) {
+  LocalizableIntegrationError createExceptionError(Exception e, ExecutionContext executionContext, Map<String, Object> responseDiagnostic) {
     if (executionContext.isDiagnosticsEnabled()) {
       // Add the exception stacktrace to the response diagnostics
       StringWriter stackTrace = new StringWriter();
@@ -111,26 +110,12 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
       responseDiagnostic.put(EXCEPTION_STACKTRACE, stackTrace.toString());
     }
 
-    return IntegrationError.builder()
-      .title(DEFAULT_ERROR_TITLE)
-      .message(e.getMessage())
-      .detail(DEFAULT_ERROR_DETAIL)
-      .build();
-  }
+    LocalizableIntegrationError error = new LocalizableIntegrationError();
+    error.setTitle(DEFAULT_ERROR_TITLE);
+    error.setMessage(e.getMessage());
+    error.setDetail(DEFAULT_ERROR_DETAIL);
 
-  protected IntegrationError getLocalizedError(ResourceBundle bundle, IntegrationError unlocalizedError) {
-    return IntegrationError.builder()
-      .title(getLocalizedString(bundle, unlocalizedError.getTitle()))
-      .message(getLocalizedString(bundle, unlocalizedError.getMessage()))
-      .detail(getLocalizedString(bundle, unlocalizedError.getDetail()))
-      .build();
-  }
-
-  protected String getLocalizedString(ResourceBundle bundle, String keyOrValue) {
-    if (keyOrValue != null && bundle.containsKey(keyOrValue)) {
-      return bundle.getString(keyOrValue);
-    }
-    return keyOrValue;
+    return error;
   }
 
   protected abstract String getBundleBaseName();
