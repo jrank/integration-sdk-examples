@@ -9,10 +9,8 @@ import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
-import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.appian.sdk.csp.box.BoxService;
-import com.box.sdk.BoxDeveloperEditionAPIConnection;
+import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 
 @TemplateId(name="DeleteFile")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -57,20 +55,13 @@ public class DeleteFile extends AbstractBoxIntegration {
     SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
-    // TODO: Move to abstract base class?
-    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
-    BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
-
     // Get integration inputs
     String fileId = integrationConfiguration.getValue(FILE_ID);
 
+    MultiStepIntegrationDesignerDiagnostic diagnostics = new MultiStepIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+
     try {
-
-      // Get client from connected system
-      BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
-        connectedSystemConfiguration, executionContext);
-
-      BoxService service = new BoxService(conn, diagnostics);
+      BoxService service = getService(connectedSystemConfiguration, executionContext, diagnostics);
 
       service.deleteFile(fileId);
 

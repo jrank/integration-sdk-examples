@@ -4,11 +4,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
-import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
+import com.appian.sdk.csp.box.BoxService;
 import com.appian.sdk.csp.box.LocalizableIntegrationError;
+import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 import com.box.sdk.BoxAPIException;
+import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -17,23 +21,33 @@ public abstract class AbstractBoxIntegration extends AbstractIntegration {
   public static final String OPERATION_DESCRIPTION = "operationDescription";
   protected abstract String getOperationDescription();
 
-  IntegrationResponse createSuccessResponse(Map<String,Object> result, ExecutionContext executionContext, BoxIntegrationDesignerDiagnostic diagnostics) {
+  private BoxService boxService;
+  BoxService getService(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext, MultiStepIntegrationDesignerDiagnostic diagnostics) {
+    if (this.boxService == null) {
+      BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
+
+      // Get client from connected system
+      BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
+        connectedSystemConfiguration, executionContext);
+
+      this.boxService = new BoxService(conn, diagnostics);
+    }
+    return boxService;
+  }
+
+  IntegrationResponse createSuccessResponse(Map<String,Object> result, ExecutionContext executionContext, MultiStepIntegrationDesignerDiagnostic diagnostic) {
     return super.createSuccessResponse(
       result,
       executionContext,
-      diagnostics.getTotalExecutionTime(),
-      diagnostics.getRequestDiagnostics(),
-      diagnostics.getResponseDiagnostics()
+      diagnostic
     );
   }
 
-  public IntegrationResponse createExceptionResponse(Exception e, ExecutionContext executionContext, BoxIntegrationDesignerDiagnostic diagnostics) {
+  public IntegrationResponse createExceptionResponse(Exception e, ExecutionContext executionContext, MultiStepIntegrationDesignerDiagnostic diagnostic) {
     return super.createExceptionResponse(
       e,
       executionContext,
-      diagnostics.getTotalExecutionTime(),
-      diagnostics.getRequestDiagnostics(),
-      diagnostics.getResponseDiagnostics()
+      diagnostic
     );
   }
 
@@ -41,13 +55,13 @@ public abstract class AbstractBoxIntegration extends AbstractIntegration {
   private static final String BOX_ERROR_DETAIL = "error.box.detail";
   private static final String BOX_ERROR_DETAIL_WITH_URL = "error.box.detailWithUrl";
   @Override
-  LocalizableIntegrationError createExceptionError(Exception e, ExecutionContext executionContext, Map<String, Object> responseDiagnostic) {
+  LocalizableIntegrationError createExceptionError(Exception e, MultiStepIntegrationDesignerDiagnostic diagnostic) {
     if (e instanceof BoxAPIException) {
 
       BoxAPIException ex = (BoxAPIException)e;
 
-      responseDiagnostic.put("Status Code", ex.getResponseCode());
-      responseDiagnostic.put("Headers", getFlattenedHeaders(ex.getHeaders()));
+      diagnostic.putResponseDiagnostic("Status Code", ex.getResponseCode());
+      diagnostic.putResponseDiagnostic("Headers", getFlattenedHeaders(ex.getHeaders()));
 
       // Create default error, override fields later if more specific values can be extracted from the response
       LocalizableIntegrationError error = new LocalizableIntegrationError();
@@ -59,7 +73,7 @@ public abstract class AbstractBoxIntegration extends AbstractIntegration {
         try {
           ObjectMapper mapper = new ObjectMapper();
           Map<String, Object> errorMap = mapper.readValue(ex.getResponse(), new TypeReference<Map<String, Object>>(){});
-          responseDiagnostic.put("Body", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(errorMap));
+          diagnostic.putResponseDiagnostic("Body", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(errorMap));
 
           Integer status = (Integer)errorMap.get("status");
           String code = (String)errorMap.get("code");
@@ -99,7 +113,7 @@ public abstract class AbstractBoxIntegration extends AbstractIntegration {
 
         } catch (Exception e2) {
           e2.printStackTrace();
-          responseDiagnostic.put("Body", ex.getResponse());
+          diagnostic.putResponseDiagnostic("Body", ex.getResponse());
         }
       }
 
@@ -107,7 +121,7 @@ public abstract class AbstractBoxIntegration extends AbstractIntegration {
 
     } else {
 
-      return super.createExceptionError(e, executionContext, responseDiagnostic);
+      return super.createExceptionError(e, diagnostic);
 
     }
   }

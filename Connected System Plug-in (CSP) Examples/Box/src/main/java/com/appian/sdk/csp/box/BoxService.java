@@ -21,9 +21,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class BoxService {
 
   private BoxDeveloperEditionAPIConnection connection;
-  private BoxIntegrationDesignerDiagnostic diagnostic;
+  private MultiStepIntegrationDesignerDiagnostic diagnostic;
 
-  public BoxService(BoxDeveloperEditionAPIConnection connection, BoxIntegrationDesignerDiagnostic diagnostic) {
+  public BoxService(BoxDeveloperEditionAPIConnection connection, MultiStepIntegrationDesignerDiagnostic diagnostic) {
     this.connection = connection;
     this.diagnostic = diagnostic;
   }
@@ -91,11 +91,39 @@ public class BoxService {
     return ((List<Map<String, Object>>)result.get("entries")).get(0);
   }
 
+  public void preflightCheck(String parentFolderId, String filename, Long fileSize)
+    throws IOException {
+
+    URL url = BoxFolder.UPLOAD_FILE_URL.build(this.connection.getBaseURL());
+    BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(this.connection, url, "OPTIONS");
+
+    Map<String, Object> parent = new HashMap<>();
+    parent.put("id", parentFolderId);
+    Map<String, Object> file = new HashMap<>();
+    file.put("name", filename);
+    file.put("parent", parent);
+    file.put("size", fileSize);
+    String body = new ObjectMapper().writeValueAsString(file);
+    request.setBody(body);
+
+    // Execute the request
+    send(request);
+  }
+
   public void deleteFile(String fileId) {
     URL url = BoxFile.FILE_URL_TEMPLATE.build(this.connection.getBaseURL(), fileId);
     BoxAPIRequestWithDiagnostics request = new BoxAPIRequestWithDiagnostics(this.connection, url, "DELETE");
 
     send(request);
+  }
+
+  public Map<String, Object> getUser(String userId) throws IOException {
+    URL url = BoxUser.USER_URL_TEMPLATE.build(this.connection.getBaseURL(), userId);
+    BoxJSONRequestWithDiagnostics request = new BoxJSONRequestWithDiagnostics(this.connection, url, "GET");
+    BoxJSONResponse response = (BoxJSONResponse)request.send();
+
+    ObjectMapper mapper = new ObjectMapper();
+    return mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
   }
 
   public Map<String, Object> getEnterpriseUsers() throws IOException {
@@ -112,11 +140,13 @@ public class BoxService {
     return mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
   }
 
-  protected BoxAPIResponse send(BoxAPIRequest request) {
+  BoxAPIResponse send(BoxAPIRequest request) {
     if (!this.diagnostic.isEnabled()) {
       // Just send the request if diagnostics are disabled
       return request.send();
     }
+
+    this.diagnostic.nextStep();
 
     Long executionStartTime = System.currentTimeMillis();
 
@@ -144,41 +174,37 @@ public class BoxService {
   private static final String DIAGNOSTIC_STATUS_CODE = "Status Code";
   private static final String DIAGNOSTIC_BODY_PART = "Body Part: ";
 
-  protected void addRequestDiagnostics(BoxAPIRequest request) {
-    Map<String, Object> requestDiagnostics = this.diagnostic.getRequestDiagnostics();
-
-    requestDiagnostics.put(DIAGNOSTIC_URL, request.getUrl().toString());
-    requestDiagnostics.put(DIAGNOSTIC_METHOD, request.getMethod());
+  void addRequestDiagnostics(BoxAPIRequest request) {
+    this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_URL, request.getUrl().toString());
+    this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_METHOD, request.getMethod());
 
     if (request instanceof BoxAPIRequestWithDiagnostics) {
       BoxAPIRequestWithDiagnostics requestWithDiagnostics = (BoxAPIRequestWithDiagnostics)request;
-      requestDiagnostics.put(DIAGNOSTIC_HEADERS, getHeadersAsStrings(requestWithDiagnostics.getHeaders()));
+      this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_HEADERS, getHeadersAsStrings(requestWithDiagnostics.getHeaders()));
 
     } else if (request instanceof BoxJSONRequestWithDiagnostics) {
       BoxJSONRequestWithDiagnostics requestWithDiagnostics = (BoxJSONRequestWithDiagnostics)request;
-      requestDiagnostics.put(DIAGNOSTIC_HEADERS, getHeadersAsStrings(requestWithDiagnostics.getHeaders()));
+      this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_HEADERS, getHeadersAsStrings(requestWithDiagnostics.getHeaders()));
       if (requestWithDiagnostics.getBodyAsJsonValue() != null) {
-        requestDiagnostics.put(DIAGNOSTIC_BODY, requestWithDiagnostics.getBodyAsJsonValue().toString());
+        this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_BODY, requestWithDiagnostics.getBodyAsJsonValue().toString());
       }
 
     } else if (request instanceof BoxMultipartRequestWithDiagnostics) {
       BoxMultipartRequestWithDiagnostics requestWithDiagnostics = (BoxMultipartRequestWithDiagnostics)request;
-      requestDiagnostics.put(DIAGNOSTIC_HEADERS, getHeadersAsStrings(requestWithDiagnostics.getHeaders()));
+      this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_HEADERS, getHeadersAsStrings(requestWithDiagnostics.getHeaders()));
       if (requestWithDiagnostics.getBodyParts() != null) {
         for (Map.Entry<String, Object> part : requestWithDiagnostics.getBodyParts().entrySet()) {
-          requestDiagnostics.put(DIAGNOSTIC_BODY_PART + part.getKey(), part.getValue());
+          this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_BODY_PART + part.getKey(), part.getValue());
         }
       }
     }
   }
 
-  protected void addResponseDiagnostics(BoxAPIResponse response) {
-    Map<String, Object> responseDiagnostic = this.diagnostic.getResponseDiagnostics();
-
-    responseDiagnostic.put(DIAGNOSTIC_STATUS_CODE, response.getResponseCode());
-    responseDiagnostic.put(DIAGNOSTIC_HEADERS, response.getHeaders());
+  void addResponseDiagnostics(BoxAPIResponse response) {
+    this.diagnostic.putResponseDiagnostic(DIAGNOSTIC_STATUS_CODE, response.getResponseCode());
+    this.diagnostic.putResponseDiagnostic(DIAGNOSTIC_HEADERS, response.getHeaders());
     if (response instanceof BoxJSONResponse) {
-      responseDiagnostic.put(DIAGNOSTIC_BODY, ((BoxJSONResponse)response).getJSON());
+      this.diagnostic.putResponseDiagnostic(DIAGNOSTIC_BODY, ((BoxJSONResponse)response).getJSON());
     }
   }
 

@@ -1,16 +1,6 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 
 import org.junit.After;
@@ -22,11 +12,8 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.ProxyConfigurationData;
-import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
-import com.appian.sdk.csp.box.integration.AbstractBoxIntegration;
+import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 import com.box.sdk.BoxAPIException;
-import com.box.sdk.BoxAPIResponse;
-import com.box.sdk.BoxAPIResponseException;
 
 public class AbstractBoxIntegrationTest {
 
@@ -57,7 +44,7 @@ public class AbstractBoxIntegrationTest {
 
     BoxAPIException exception = new BoxAPIException("", 409, responseBody);
 
-    BoxIntegrationDesignerDiagnostic diagnostic = new BoxIntegrationDesignerDiagnostic(true);
+    MultiStepIntegrationDesignerDiagnostic diagnostic = new MultiStepIntegrationDesignerDiagnostic(true);
 
     IntegrationResponse response = this.integration.createExceptionResponse(exception, getExecutionContext(false), diagnostic);
 
@@ -74,7 +61,7 @@ public class AbstractBoxIntegrationTest {
 
     BoxAPIException exception = new BoxAPIException("", 400, responseBody);
 
-    BoxIntegrationDesignerDiagnostic diagnostic = new BoxIntegrationDesignerDiagnostic(true);
+    MultiStepIntegrationDesignerDiagnostic diagnostic = new MultiStepIntegrationDesignerDiagnostic(true);
 
     IntegrationResponse response = this.integration.createExceptionResponse(exception, getExecutionContext(false), diagnostic);
 
@@ -92,7 +79,7 @@ public class AbstractBoxIntegrationTest {
 
     BoxAPIException exception = new BoxAPIException("", 409, responseBody);
 
-    BoxIntegrationDesignerDiagnostic diagnostic = new BoxIntegrationDesignerDiagnostic(true);
+    MultiStepIntegrationDesignerDiagnostic diagnostic = new MultiStepIntegrationDesignerDiagnostic(true);
 
     IntegrationResponse response = this.integration.createExceptionResponse(exception, getExecutionContext(false), diagnostic);
 

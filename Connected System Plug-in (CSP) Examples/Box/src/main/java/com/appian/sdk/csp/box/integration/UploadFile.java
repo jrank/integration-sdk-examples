@@ -10,10 +10,8 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
-import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.appian.sdk.csp.box.BoxService;
-import com.box.sdk.BoxDeveloperEditionAPIConnection;
+import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 
 @TemplateId(name="UploadFile")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -71,9 +69,6 @@ public class UploadFile extends AbstractBoxIntegration {
     SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
-    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
-    BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
-
     // Get integration inputs
     Document document = integrationConfiguration.getValue(DOCUMENT);
     String fileName = integrationConfiguration.getValue(FILE_NAME);
@@ -82,13 +77,13 @@ public class UploadFile extends AbstractBoxIntegration {
     }
     String parentFolderId = integrationConfiguration.getValue(PARENT_FOLDER_ID);
 
+    MultiStepIntegrationDesignerDiagnostic diagnostics = new MultiStepIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+
     try {
+      BoxService service = getService(connectedSystemConfiguration, executionContext, diagnostics);
 
-      // Get client from connected system
-      BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
-        connectedSystemConfiguration, executionContext);
-
-      BoxService service = new BoxService(conn, diagnostics);
+      // The Pre-flight check API will verify that a file will be accepted by Box before you send all the bytes over the wire.
+      service.preflightCheck(parentFolderId, fileName, Long.valueOf(document.getFileSize()));
 
       Map<String, Object> result = service.uploadFile(parentFolderId, document.getInputStream(), fileName, Long.valueOf(document.getFileSize()), Long.valueOf(document.getId()));
 

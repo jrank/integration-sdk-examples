@@ -3,15 +3,17 @@ package com.appian.sdk.csp.box;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class BoxIntegrationDesignerDiagnostic {
+public class MultiStepIntegrationDesignerDiagnostic {
 
   private Boolean isEnabled;
+  private Integer stepNumber;
   private Map<String, Object> requestDiagnostics;
   private Map<String, Object> responseDiagnostics;
   private Long totalExecutionTime;
 
-  public BoxIntegrationDesignerDiagnostic(Boolean isEnabled) {
+  public MultiStepIntegrationDesignerDiagnostic(Boolean isEnabled) {
     this.isEnabled = isEnabled;
+    this.stepNumber = 0;
     this.requestDiagnostics = new LinkedHashMap<>();
     this.responseDiagnostics = new LinkedHashMap<>();
     this.totalExecutionTime = 0L;
@@ -19,6 +21,29 @@ public class BoxIntegrationDesignerDiagnostic {
 
   public boolean isEnabled() {
     return isEnabled;
+  }
+
+  public void nextStep() {
+    this.stepNumber += 1;
+    // TODO: Insert a divider in diagnostics?
+//    putRequestDiagnostic(String.valueOf(this.stepNumber), "----------");
+//    putResponseDiagnostic(String.valueOf(this.stepNumber), "----------");
+  }
+
+  public Integer getStepNumber() {
+    return this.stepNumber;
+  }
+
+  public void putRequestDiagnostic(String key, Object value) {
+    this.requestDiagnostics.put(getDiagnosticKey(key), value);
+  }
+
+  public void putResponseDiagnostic(String key, Object value) {
+    this.responseDiagnostics.put(getDiagnosticKey(key), value);
+  }
+
+  private String getDiagnosticKey(String key) {
+    return getStepNumber() + " - " + key;
   }
 
   public Map<String,Object> getRequestDiagnostics() {

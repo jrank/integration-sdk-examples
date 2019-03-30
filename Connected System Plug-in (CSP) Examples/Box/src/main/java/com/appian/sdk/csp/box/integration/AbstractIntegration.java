@@ -12,6 +12,7 @@ import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.sdk.csp.box.LocalizableIntegrationError;
+import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 
 public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
 
@@ -61,53 +62,55 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
   IntegrationResponse createSuccessResponse(
     Map<String,Object> result,
     ExecutionContext executionContext,
-    Long executionTime,
-    Map<String,Object> requestDiagnostic,
-    Map<String,Object> responseDiagnostic) {
+    MultiStepIntegrationDesignerDiagnostic diagnostic) {
 
-    IntegrationDesignerDiagnostic diagnostic = null;
-    if (executionContext.isDiagnosticsEnabled()) {
-      diagnostic = IntegrationDesignerDiagnostic.builder()
-        .addExecutionTimeDiagnostic(executionTime)
-        .addRequestDiagnostic(requestDiagnostic)
-        .addResponseDiagnostic(responseDiagnostic)
+    IntegrationDesignerDiagnostic responseDiagnostic = null;
+    if (diagnostic.isEnabled()) {
+      responseDiagnostic = IntegrationDesignerDiagnostic.builder()
+        .addExecutionTimeDiagnostic(diagnostic.getTotalExecutionTime())
+        .addRequestDiagnostic(diagnostic.getRequestDiagnostics())
+        .addResponseDiagnostic(diagnostic.getResponseDiagnostics())
         .build();
     }
 
     return IntegrationResponse
       .forSuccess(result)
-      .withDiagnostic(diagnostic)
+      .withDiagnostic(responseDiagnostic)
       .build();
   }
 
-  IntegrationResponse createExceptionResponse(Exception e, ExecutionContext executionContext, Long executionTime, Map<String, Object> requestDiagnostic, Map<String, Object> responseDiagnostic) {
-    LocalizableIntegrationError error = createExceptionError(e, executionContext, responseDiagnostic);
+  IntegrationResponse createExceptionResponse(Exception e,
+    ExecutionContext executionContext,
+    MultiStepIntegrationDesignerDiagnostic diagnostic) {
+    LocalizableIntegrationError error = createExceptionError(e, diagnostic);
 
-    IntegrationDesignerDiagnostic diagnostic = null;
-    if (executionContext.isDiagnosticsEnabled()) {
-      diagnostic = IntegrationDesignerDiagnostic.builder()
-        .addRequestDiagnostic(requestDiagnostic)
-        .addResponseDiagnostic(responseDiagnostic)
-        .addExecutionTimeDiagnostic(executionTime)
+    IntegrationDesignerDiagnostic responseDiagnostic = null;
+    if (diagnostic.isEnabled()) {
+      responseDiagnostic = IntegrationDesignerDiagnostic.builder()
+        .addExecutionTimeDiagnostic(diagnostic.getTotalExecutionTime())
+        .addRequestDiagnostic(diagnostic.getRequestDiagnostics())
+        .addResponseDiagnostic(diagnostic.getResponseDiagnostics())
         .addErrorDiagnostic(error.localize(getDesignerBundle(executionContext)))
         .build();
     }
 
+    e.printStackTrace();
+
     return IntegrationResponse
       .forError(error.localize(getExecutionBundle(executionContext)))
-      .withDiagnostic(diagnostic)
+      .withDiagnostic(responseDiagnostic)
       .build();
   }
 
   private static final String DEFAULT_ERROR_TITLE = "error.default.title";
   private static final String DEFAULT_ERROR_DETAIL = "error.default.detail";
   private static final String EXCEPTION_STACKTRACE = "Exception";
-  LocalizableIntegrationError createExceptionError(Exception e, ExecutionContext executionContext, Map<String, Object> responseDiagnostic) {
-    if (executionContext.isDiagnosticsEnabled()) {
+  LocalizableIntegrationError createExceptionError(Exception e, MultiStepIntegrationDesignerDiagnostic diagnostic) {
+    if (diagnostic.isEnabled()) {
       // Add the exception stacktrace to the response diagnostics
       StringWriter stackTrace = new StringWriter();
       e.printStackTrace(new PrintWriter(stackTrace));
-      responseDiagnostic.put(EXCEPTION_STACKTRACE, stackTrace.toString());
+      diagnostic.putResponseDiagnostic(EXCEPTION_STACKTRACE, stackTrace.toString());
     }
 
     LocalizableIntegrationError error = new LocalizableIntegrationError();

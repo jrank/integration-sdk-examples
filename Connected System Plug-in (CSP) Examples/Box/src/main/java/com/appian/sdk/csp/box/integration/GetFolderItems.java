@@ -12,10 +12,8 @@ import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
-import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.appian.sdk.csp.box.BoxService;
-import com.box.sdk.BoxDeveloperEditionAPIConnection;
+import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 
 @TemplateId(name="GetFolderItems")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
@@ -74,9 +72,6 @@ public class GetFolderItems extends AbstractBoxIntegration {
     SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
-    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
-    BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
-
     // Get integration inputs
     String folderId = integrationConfiguration.getValue(FOLDER_ID);
     // TODO: Should paging management go in service or in integration?
@@ -92,13 +87,10 @@ public class GetFolderItems extends AbstractBoxIntegration {
       batchSize = MAX_BATCH_SIZE;
     }
 
+    MultiStepIntegrationDesignerDiagnostic diagnostics = new MultiStepIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+
     try {
-
-      // Get client from connected system
-      BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
-        connectedSystemConfiguration, executionContext);
-
-      BoxService service = new BoxService(conn, diagnostics);
+      BoxService service = getService(connectedSystemConfiguration, executionContext, diagnostics);
 
       Map<String, Object> result = service.getFolderItems(folderId, startIndex, batchSize);
 
