@@ -36,11 +36,6 @@ public class GetFolderInfo extends AbstractBoxIntegration {
   }
 
   @Override
-  protected String getOperationDescription() {
-    return "Get information about a folder.";
-  }
-
-  @Override
   protected IntegrationResponse execute(
     SimpleConfiguration integrationConfiguration,
     SimpleConfiguration connectedSystemConfiguration,

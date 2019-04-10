@@ -12,7 +12,6 @@ import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTem
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxService;
 import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
-import com.box.sdk.BoxFolder;
 
 @TemplateId(name="UploadFile")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -32,10 +31,6 @@ public class UploadFile extends AbstractBoxIntegration {
     ExecutionContext executionContext) {
 
     SimpleConfiguration config = integrationConfiguration.setProperties(
-      // SDK: Operation description should be shown somewhere by default, even better in the create dialog!
-      textProperty(OPERATION_DESCRIPTION)
-        .isReadOnly(true)
-        .build(),
       documentProperty(DOCUMENT)
         .label("Document")
         .instructionText("The document to upload.")
@@ -55,15 +50,7 @@ public class UploadFile extends AbstractBoxIntegration {
         .build()
     );
 
-    // SDK: Would like to set this fixed, default value when creating the property
-    config.setValue(OPERATION_DESCRIPTION, getOperationDescription());
-
     return config;
-  }
-
-  @Override
-  protected String getOperationDescription() {
-    return "Add a new file. A file object is returned inside of a collection if the ID is valid and if the update is successful.";
   }
 
   @Override

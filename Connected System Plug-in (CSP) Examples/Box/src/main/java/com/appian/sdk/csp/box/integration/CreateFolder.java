@@ -27,10 +27,6 @@ public class CreateFolder extends AbstractBoxIntegration {
     ExecutionContext executionContext) {
 
     SimpleConfiguration config = integrationConfiguration.setProperties(
-      // SDK: Operation description should be shown somewhere by default, even better in the create dialog!
-      textProperty(OPERATION_DESCRIPTION)
-        .isReadOnly(true)
-        .build(),
       textProperty(FOLDER_NAME)
         .label("Name")
         .instructionText("The desired name for the folder. Box supports folder names of 255 characters or less. Names cannot contain non-printable ASCII characters, \"/\" or \"\\\", names with trailing spaces, or the special names '.' and '..'.")
@@ -45,15 +41,7 @@ public class CreateFolder extends AbstractBoxIntegration {
         .build()
     );
 
-    // SDK: Would like to set this fixed, default value when creating the property
-    config.setValue(OPERATION_DESCRIPTION, getOperationDescription());
-
     return config;
-  }
-
-  @Override
-  protected String getOperationDescription() {
-    return "Create a new folder. A full folder object is returned if the parent folder ID is valid and if no name collisions occur.";
   }
 
   @Override

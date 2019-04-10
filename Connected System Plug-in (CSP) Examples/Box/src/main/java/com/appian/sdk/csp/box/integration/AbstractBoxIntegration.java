@@ -18,9 +18,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public abstract class AbstractBoxIntegration extends AbstractIntegration {
 
-  public static final String OPERATION_DESCRIPTION = "operationDescription";
-  protected abstract String getOperationDescription();
-
   private BoxService boxService;
   BoxService getService(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext, MultiStepIntegrationDesignerDiagnostic diagnostics) {
     if (this.boxService == null) {

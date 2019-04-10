@@ -26,10 +26,6 @@ public class DeleteFile extends AbstractBoxIntegration {
     ExecutionContext executionContext) {
 
     SimpleConfiguration config = integrationConfiguration.setProperties(
-      // SDK: Operation description should be shown somewhere by default, even better in the create dialog!
-      textProperty(OPERATION_DESCRIPTION)
-        .isReadOnly(true)
-        .build(),
       textProperty(FILE_ID)
         .label("File ID")
         .instructionText("The file ID to delete")
@@ -38,15 +34,7 @@ public class DeleteFile extends AbstractBoxIntegration {
         .build()
     );
 
-    // SDK: Would like to set this fixed, default value when creating the property
-    config.setValue(OPERATION_DESCRIPTION, getOperationDescription());
-
     return config;
-  }
-
-  @Override
-  protected String getOperationDescription() {
-    return "Discards a file to the trash. Depending on the enterprise settings for this user, the item will either be actually deleted from Box or moved to the trash.";
   }
 
   @Override

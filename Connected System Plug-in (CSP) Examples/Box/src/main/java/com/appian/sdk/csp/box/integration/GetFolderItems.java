@@ -62,11 +62,6 @@ public class GetFolderItems extends AbstractBoxIntegration {
   }
 
   @Override
-  protected String getOperationDescription() {
-    return "Gets all of the files, folders, or web links contained within a folder. Returns all of the items contained in the folder. An error is returned if the folder does not exist, or if any of the parameters are invalid.";
-  }
-
-  @Override
   protected IntegrationResponse execute(
     SimpleConfiguration integrationConfiguration,
     SimpleConfiguration connectedSystemConfiguration,
