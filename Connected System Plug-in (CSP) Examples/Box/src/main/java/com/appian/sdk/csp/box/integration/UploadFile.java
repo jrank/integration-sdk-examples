@@ -12,10 +12,13 @@ import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTem
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxService;
 import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
+import com.box.sdk.BoxFolder;
 
 @TemplateId(name="UploadFile")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
 public class UploadFile extends AbstractBoxIntegration {
+
+  public static final int CHUNKED_UPLOAD_MINIMUM = 20000;
 
   public static final String DOCUMENT = "document";
   public static final String FILE_NAME = "fileName";
@@ -85,7 +88,14 @@ public class UploadFile extends AbstractBoxIntegration {
       // The Pre-flight check API will verify that a file will be accepted by Box before you send all the bytes over the wire.
       service.preflightCheck(parentFolderId, fileName, Long.valueOf(document.getFileSize()));
 
-      Map<String, Object> result = service.uploadFile(parentFolderId, document.getInputStream(), fileName, Long.valueOf(document.getFileSize()), Long.valueOf(document.getId()));
+      Map<String, Object> result;
+      if (document.getFileSize() > CHUNKED_UPLOAD_MINIMUM) {
+        // Use chunked upload
+        result = service.uploadLargeFile(parentFolderId, document.getInputStream(), fileName, Long.valueOf(document.getFileSize()), Long.valueOf(document.getId()));
+      } else {
+        // Use standard upload
+        result = service.uploadFile(parentFolderId, document.getInputStream(), fileName, Long.valueOf(document.getFileSize()), Long.valueOf(document.getId()));
+      }
 
       return createSuccessResponse(result, executionContext, diagnostics);
 

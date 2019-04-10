@@ -6,16 +6,11 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.box.sdk.BoxAPIConnection;
-import com.box.sdk.BoxAPIRequest;
-import com.box.sdk.BoxAPIResponse;
 import com.box.sdk.BoxDateFormat;
-import com.box.sdk.BoxJSONResponse;
 import com.box.sdk.BoxMultipartRequest;
 
 public class BoxMultipartRequestWithDiagnostics extends BoxMultipartRequest {
@@ -52,13 +47,13 @@ public class BoxMultipartRequestWithDiagnostics extends BoxMultipartRequest {
     this.putField(key, BoxDateFormat.format(value));
   }
 
-  public void setFile(InputStream inputStream, String filename, Long fileSize, Long documentId) throws UnsupportedEncodingException {
+  public void setFile(InputStream inputStream, String fileName, Long fileSize, Long documentId) throws UnsupportedEncodingException {
     StringBuilder part = new StringBuilder();
-    part.append("Content-Disposition: form-data; name=\"file\"; filename=\"" + URLEncoder.encode(filename, "UTF-8") + "\"\r\n");
+    part.append("Content-Disposition: form-data; name=\"file\"; filename=\"" + URLEncoder.encode(fileName, "UTF-8") + "\"\r\n");
     part.append("Content-Type: application/octet-stream\r\n");
     part.append("\r\n");
-    part.append("<File content not shown - " + filename + " (ID: " + documentId + ")>");
+    part.append("<File content not shown - " + fileName + " (ID: " + documentId + ", Size (bytes): " + fileSize + ")>");
     this.parts.put("file", part.toString());
-    super.setFile(inputStream, filename, fileSize);
+    super.setFile(inputStream, fileName, fileSize);
   }
 }

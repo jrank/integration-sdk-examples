@@ -15,6 +15,7 @@ import com.box.sdk.BoxFile;
 import com.box.sdk.BoxFolder;
 import com.box.sdk.BoxJSONResponse;
 import com.box.sdk.BoxUser;
+import com.box.sdk.LargeFileUpload;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -67,8 +68,7 @@ public class BoxService {
     return mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
   }
 
-    // TODO: Use chunked upload for larger files
-  public Map<String, Object> uploadFile(String parentFolderId, InputStream inputStream, String filename, Long fileSize, Long documentId)
+  public Map<String, Object> uploadFile(String parentFolderId, InputStream inputStream, String fileName, Long fileSize, Long documentId)
     throws IOException {
 
     URL url = BoxFolder.UPLOAD_FILE_URL.build(this.connection.getBaseUploadURL());
@@ -77,11 +77,11 @@ public class BoxService {
     Map<String, Object> parent = new HashMap<>();
     parent.put("id", parentFolderId);
     Map<String, Object> file = new HashMap<>();
-    file.put("name", filename);
+    file.put("name", fileName);
     file.put("parent", parent);
     String attributes = new ObjectMapper().writeValueAsString(file);
     request.putField("attributes", attributes);
-    request.setFile(inputStream, filename, fileSize, documentId);
+    request.setFile(inputStream, fileName, fileSize, documentId);
 
     // Execute the request
     BoxJSONResponse response = (BoxJSONResponse)send(request);
@@ -89,6 +89,92 @@ public class BoxService {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> result = mapper.readValue(response.getJSON(), new TypeReference<Map<String, Object>>(){});
     return ((List<Map<String, Object>>)result.get("entries")).get(0);
+  }
+
+  public Map<String, Object> uploadLargeFile(String parentFolderId, InputStream inputStream, String fileName, Long fileSize, Long documentId)
+    throws IOException, InterruptedException {
+
+    URL url = BoxFolder.UPLOAD_SESSION_URL_TEMPLATE.build(this.connection.getBaseUploadURL());
+
+    // Chunked upload is more complicated and not worth deconstructing to individual requests for diagnostics
+    // Add request diagnostics manually
+    if (this.diagnostic.isEnabled()) {
+      // Distinguish this request from any prior request (eg: pre-flight check)
+      this.diagnostic.nextStep();
+
+//      this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_URL, url.toString());
+//      this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_METHOD, "POST");
+      this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_CHUNKED_UPLOAD_FILE, "<File content not shown - " + fileName + " (ID: " + documentId + ", Size (bytes): " + fileSize + ")>");
+    }
+
+    BoxFile.Info info = (new LargeFileUpload()).upload(this.connection, parentFolderId, inputStream, url, fileName, fileSize);
+
+    // Add response diagnostics manually
+    if (this.diagnostic.isEnabled()) {
+      this.diagnostic.putResponseDiagnostic("Info", info.toString());
+    }
+
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("type", info.getType());
+    result.put("id", info.getID());
+    result.put("name", info.getName());
+//    ObjectMapper mapper = new ObjectMapper();
+//    Map<String, Object> result = mapper.convertValue(info, new TypeReference<Map<String, Object>>() {});
+
+    return result;
+/*
+  Dictionary
+    file_version: Dictionary
+        sha1: "514fd5edb57a71e7904da1b7ebb391c8e34b1123"
+        id: "457154470362"
+        type: "file_version"
+    parent: Dictionary
+        sequence_id: null (Null)
+        name: "All Files"
+        etag: null (Null)
+        id: "0"
+        type: "folder"
+    description: null (Text)
+    created_at: "2019-04-02T05:34:13-07:00"
+    content_created_at: "2019-04-02T05:34:13-07:00"
+    owned_by: Dictionary
+        name: "Jacob Rank"
+        id: "2246041444"
+        type: "user"
+        login: "jacob.rank@appian.com"
+    type: "file"
+    item_status: "active"
+    created_by: Dictionary
+        name: "Jacob Rank"
+        id: "2246041444"
+        type: "user"
+        login: "jacob.rank@appian.com"
+    trashed_at: null (Text)
+    sha1: "514fd5edb57a71e7904da1b7ebb391c8e34b1123"
+    size: 168
+    sequence_id: "0"
+    name: "wrgv13"
+    purged_at: null (Text)
+    modified_by: Dictionary
+        name: "Jacob Rank"
+        id: "2246041444"
+        type: "user"
+        login: "jacob.rank@appian.com"
+    shared_link: null (Text)
+    etag: "0"
+    content_modified_at: "2019-04-02T05:34:13-07:00"
+    id: "432407922762"
+    modified_at: "2019-04-02T05:34:13-07:00"
+    path_collection: Dictionary
+        entries: List of Dictionary: 1 item
+            Dictionary
+                sequence_id: null (Null)
+                name: "All Files"
+                etag: null (Null)
+                id: "0"
+                type: "folder"
+        total_count: 1
+*/
   }
 
   public void preflightCheck(String parentFolderId, String filename, Long fileSize)
@@ -173,6 +259,7 @@ public class BoxService {
   private static final String DIAGNOSTIC_HEADERS = "Headers";
   private static final String DIAGNOSTIC_STATUS_CODE = "Status Code";
   private static final String DIAGNOSTIC_BODY_PART = "Body Part: ";
+  private static final String DIAGNOSTIC_CHUNKED_UPLOAD_FILE = "File (Chunked Upload)";
 
   void addRequestDiagnostics(BoxAPIRequest request) {
     this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_URL, request.getUrl().toString());
@@ -215,4 +302,6 @@ public class BoxService {
     }
     return stringHeaders;
   }
+
+
 }
