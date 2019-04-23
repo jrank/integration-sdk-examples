@@ -9,8 +9,8 @@ import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
 import com.appian.sdk.csp.box.BoxService;
-import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 
 @TemplateId(name="CreateFolder")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -54,7 +54,7 @@ public class CreateFolder extends AbstractBoxIntegration {
     String folderName = integrationConfiguration.getValue(FOLDER_NAME);
     String parentFolderId = integrationConfiguration.getValue(PARENT_FOLDER_ID);
 
-    MultiStepIntegrationDesignerDiagnostic diagnostics = new MultiStepIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
 
     try {
       BoxService service = getService(connectedSystemConfiguration, executionContext, diagnostics);

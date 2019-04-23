@@ -12,8 +12,8 @@ import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
 import com.appian.sdk.csp.box.BoxService;
-import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 
 @TemplateId(name="GetFolderItems")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
@@ -82,7 +82,7 @@ public class GetFolderItems extends AbstractBoxIntegration {
       batchSize = MAX_BATCH_SIZE;
     }
 
-    MultiStepIntegrationDesignerDiagnostic diagnostics = new MultiStepIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
 
     try {
       BoxService service = getService(connectedSystemConfiguration, executionContext, diagnostics);

@@ -12,7 +12,7 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.ProxyConfigurationData;
-import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
 import com.box.sdk.BoxAPIException;
 
 public class AbstractBoxIntegrationTest {
@@ -44,7 +44,7 @@ public class AbstractBoxIntegrationTest {
 
     BoxAPIException exception = new BoxAPIException("", 409, responseBody);
 
-    MultiStepIntegrationDesignerDiagnostic diagnostic = new MultiStepIntegrationDesignerDiagnostic(true);
+    BoxIntegrationDesignerDiagnostic diagnostic = new BoxIntegrationDesignerDiagnostic(true);
 
     IntegrationResponse response = this.integration.createExceptionResponse(exception, getExecutionContext(false), diagnostic);
 
@@ -61,7 +61,7 @@ public class AbstractBoxIntegrationTest {
 
     BoxAPIException exception = new BoxAPIException("", 400, responseBody);
 
-    MultiStepIntegrationDesignerDiagnostic diagnostic = new MultiStepIntegrationDesignerDiagnostic(true);
+    BoxIntegrationDesignerDiagnostic diagnostic = new BoxIntegrationDesignerDiagnostic(true);
 
     IntegrationResponse response = this.integration.createExceptionResponse(exception, getExecutionContext(false), diagnostic);
 
@@ -79,7 +79,7 @@ public class AbstractBoxIntegrationTest {
 
     BoxAPIException exception = new BoxAPIException("", 409, responseBody);
 
-    MultiStepIntegrationDesignerDiagnostic diagnostic = new MultiStepIntegrationDesignerDiagnostic(true);
+    BoxIntegrationDesignerDiagnostic diagnostic = new BoxIntegrationDesignerDiagnostic(true);
 
     IntegrationResponse response = this.integration.createExceptionResponse(exception, getExecutionContext(false), diagnostic);
 

@@ -13,13 +13,13 @@ import com.box.sdk.BoxDeveloperEditionAPIConnection;
 public class BoxServiceTest {
 
   BoxService service;
-  MultiStepIntegrationDesignerDiagnostic diagnostic;
+  BoxIntegrationDesignerDiagnostic diagnostic;
 
   @Before
   public void setUp() throws Exception {
     BoxConfig boxConfig = BoxConfig.readFrom(new InputStreamReader(BoxServiceTest.class.getResourceAsStream("box_config.json")));
     BoxDeveloperEditionAPIConnection conn = BoxDeveloperEditionAPIConnection.getAppUserConnection("2246041444", boxConfig);
-    diagnostic = new MultiStepIntegrationDesignerDiagnostic(true);
+    diagnostic = new BoxIntegrationDesignerDiagnostic(true);
     service = new BoxService(conn, diagnostic);
   }
 

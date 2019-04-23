@@ -4,14 +4,12 @@
     <description>Connect to Box</description>
     <vendor name="Appian" url="http://www.appian.com"/>
     <version>1.0.0.0</version>
-    <application-version min="7.6.0.4"/>
+    <application-version min="19.1.0.0"/>
   </plugin-info>
 
   <connected-system-template key="BoxPlatformConnectedSystem" name="BoxPlatformConnectedSystem"
                              class="com.appian.sdk.csp.box.BoxPlatformConnectedSystem">
 
-    <integration-template key="BoxHelloWorldIntegration" name="BoxHelloWorldIntegration"
-                          class="com.appian.sdk.csp.box.integration.BoxHelloWorldIntegration" />
     <integration-template key="GetFolderInfo" name="GetFolderInfo"
                           class="com.appian.sdk.csp.box.integration.GetFolderInfo" />
     <integration-template key="GetFolderItems" name="GetFolderItems"

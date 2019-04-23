@@ -10,7 +10,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxService;
-import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
 
 @TemplateId(name="DeleteFile")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -46,7 +46,7 @@ public class DeleteFile extends AbstractBoxIntegration {
     // Get integration inputs
     String fileId = integrationConfiguration.getValue(FILE_ID);
 
-    MultiStepIntegrationDesignerDiagnostic diagnostics = new MultiStepIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+    BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
 
     try {
       BoxService service = getService(connectedSystemConfiguration, executionContext, diagnostics);

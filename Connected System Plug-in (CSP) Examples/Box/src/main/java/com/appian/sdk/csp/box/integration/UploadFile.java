@@ -10,8 +10,8 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
 import com.appian.sdk.csp.box.BoxService;
-import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 
 @TemplateId(name="UploadFile")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -65,30 +65,28 @@ public class UploadFile extends AbstractBoxIntegration {
     if (fileName == null) {
       fileName = document.getFileName();
     }
+    Integer fileSize = document.getFileSize();
     String parentFolderId = integrationConfiguration.getValue(PARENT_FOLDER_ID);
 
-    MultiStepIntegrationDesignerDiagnostic diagnostics = new MultiStepIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
+    BoxIntegrationDesignerDiagnostic diagnostic = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
 
     try {
-      BoxService service = getService(connectedSystemConfiguration, executionContext, diagnostics);
+      BoxService service = getService(connectedSystemConfiguration, executionContext, diagnostic);
 
-      // The Pre-flight check API will verify that a file will be accepted by Box before you send all the bytes over the wire.
-      service.preflightCheck(parentFolderId, fileName, Long.valueOf(document.getFileSize()));
+      service.canUpload(parentFolderId, fileName, fileSize);
 
-      Map<String, Object> result;
-      if (document.getFileSize() > CHUNKED_UPLOAD_MINIMUM) {
-        // Use chunked upload
-        result = service.uploadLargeFile(parentFolderId, document.getInputStream(), fileName, Long.valueOf(document.getFileSize()), Long.valueOf(document.getId()));
+      Map<String,Object> result;
+      // CHeck file size to determine whether to use chunked upload
+      if (fileSize > CHUNKED_UPLOAD_MINIMUM) {
+        result = service.uploadLargeFile(parentFolderId, fileName, fileSize, document.getId(), document.getInputStream());
       } else {
-        // Use standard upload
-        result = service.uploadFile(parentFolderId, document.getInputStream(), fileName, Long.valueOf(document.getFileSize()), Long.valueOf(document.getId()));
+        result = service.uploadFile(parentFolderId, fileName, document.getId(), document.getInputStream());
       }
 
-      return createSuccessResponse(result, executionContext, diagnostics);
+      return createSuccessResponse(result, executionContext, diagnostic);
 
     } catch (Exception e) {
-
-      return createExceptionResponse(e, executionContext, diagnostics);
+      return createExceptionResponse(e, executionContext, diagnostic);
     }
   }
 }

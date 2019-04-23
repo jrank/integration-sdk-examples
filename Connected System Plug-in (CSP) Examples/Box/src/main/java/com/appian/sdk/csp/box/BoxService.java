@@ -10,10 +10,13 @@ import java.util.Map;
 
 import com.box.sdk.BoxAPIRequest;
 import com.box.sdk.BoxAPIResponse;
+import com.box.sdk.BoxCollaborator;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.box.sdk.BoxFile;
 import com.box.sdk.BoxFolder;
+import com.box.sdk.BoxItem;
 import com.box.sdk.BoxJSONResponse;
+import com.box.sdk.BoxResource;
 import com.box.sdk.BoxUser;
 import com.box.sdk.LargeFileUpload;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -22,11 +25,165 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class BoxService {
 
   private BoxDeveloperEditionAPIConnection connection;
-  private MultiStepIntegrationDesignerDiagnostic diagnostic;
+  private BoxIntegrationDesignerDiagnostic diagnostic;
 
-  public BoxService(BoxDeveloperEditionAPIConnection connection, MultiStepIntegrationDesignerDiagnostic diagnostic) {
+  public BoxService(BoxDeveloperEditionAPIConnection connection, BoxIntegrationDesignerDiagnostic diagnostic) {
     this.connection = connection;
     this.diagnostic = diagnostic;
+  }
+
+  public void canUpload(String parentFolderId, String fileName, Integer fileSize) {
+    if (diagnostic.isEnabled()) {
+      Map<String,Object> requestDiagnostic = new LinkedHashMap<>();
+      requestDiagnostic.put("parentFolderId", parentFolderId);
+      requestDiagnostic.put("name", fileName);
+      requestDiagnostic.put("fileSize", fileSize);
+      diagnostic.putRequestDiagnostic("BoxFolder - Can Upload", requestDiagnostic);
+    }
+
+    long startTime = System.currentTimeMillis();
+    try {
+      BoxFolder folder = new BoxFolder(connection, parentFolderId);
+      folder.canUpload(fileName, fileSize);
+
+      if (diagnostic.isEnabled()) {
+        diagnostic.putResponseDiagnostic("BoxFolder - Can Upload", "(Void)");
+      }
+    } finally {
+      diagnostic.addExecutionTime(System.currentTimeMillis() - startTime);
+    }
+  }
+
+  public Map<String,Object> uploadFile(String parentFolderId, String fileName, Integer documentId, InputStream inputStream) {
+    if (diagnostic.isEnabled()) {
+      Map<String,Object> requestDiagnostic = new LinkedHashMap<>();
+      requestDiagnostic.put("parentFolderId", parentFolderId);
+      requestDiagnostic.put("fileContent", "[Document: " + documentId + "]");
+      requestDiagnostic.put("name", fileName);
+      diagnostic.putRequestDiagnostic("BoxFolder - Upload File", requestDiagnostic);
+    }
+
+    long startTime = System.currentTimeMillis();
+    try {
+      BoxFolder folder = new BoxFolder(connection, parentFolderId);
+      BoxFile.Info info = folder.uploadFile(inputStream, fileName);
+      Map<String,Object> result = boxFileInfoToMap(info, false);
+
+      if (diagnostic.isEnabled()) {
+        diagnostic.putResponseDiagnostic("BoxFolder - Upload File", result);
+      }
+
+      return result;
+
+    } finally {
+      diagnostic.addExecutionTime(System.currentTimeMillis() - startTime);
+    }
+  }
+
+  public Map<String,Object> uploadLargeFile(String parentFolderId, String fileName, Integer fileSize, Integer documentId, InputStream inputStream)
+    throws IOException, InterruptedException {
+    if (diagnostic.isEnabled()) {
+      Map<String,Object> requestDiagnostic = new LinkedHashMap<>();
+      requestDiagnostic.put("parentFolderId", parentFolderId);
+      requestDiagnostic.put("inputStream", "[Document: " + documentId + "]");
+      requestDiagnostic.put("fileName", fileName);
+      requestDiagnostic.put("fileSize", fileSize);
+      diagnostic.putRequestDiagnostic("BoxFolder - Upload Large File", requestDiagnostic);
+    }
+
+    long startTime = System.currentTimeMillis();
+    try {
+      BoxFolder folder = new BoxFolder(connection, parentFolderId);
+      BoxFile.Info info = folder.uploadLargeFile(inputStream, fileName, fileSize);
+      Map<String,Object> result = boxFileInfoToMap(info, false);
+
+      if (diagnostic.isEnabled()) {
+        diagnostic.putResponseDiagnostic("BoxFolder - Upload Large File", result);
+      }
+
+      return result;
+
+    } finally {
+      diagnostic.addExecutionTime(System.currentTimeMillis() - startTime);
+    }
+  }
+
+  protected Map<String,Object> boxResourceInfoToMap(BoxResource.Info info) {
+    if (info == null) {
+      return null;
+    }
+
+    Map<String,Object> result = new LinkedHashMap<>();
+
+    result.put("id", info.getID());
+
+    return result;
+  }
+
+  protected Map<String,Object> boxItemInfoToMap(BoxItem.Info info, boolean isMini) {
+    if (info == null) {
+      return null;
+    }
+
+    Map<String,Object> result = boxResourceInfoToMap(info);
+
+    result.put("name", info.getName());
+    if (!isMini) {
+      result.put("description", info.getDescription());
+      result.put("createdAt", info.getCreatedAt());
+      result.put("createdBy", boxUserInfoToMap(info.getCreatedBy(), true));
+      result.put("modifiedAt", info.getModifiedAt());
+      result.put("modifiedBy", boxUserInfoToMap(info.getModifiedBy(), true));
+      result.put("itemStatus", info.getItemStatus());
+      result.put("ownedBy", boxUserInfoToMap(info.getOwnedBy(), true));
+      result.put("parent", boxItemInfoToMap(info.getParent(), true));
+    }
+
+    return result;
+  }
+
+  protected Map<String,Object> boxFileInfoToMap(BoxFile.Info info, boolean isMini) {
+    if (info == null) {
+      return null;
+    }
+
+    Map<String,Object> result = boxItemInfoToMap(info, isMini);
+
+    result.put("extension", info.getExtension());
+
+    return result;
+  }
+
+  protected Map<String,Object> boxCollaboratorInfoToMap(BoxCollaborator.Info info, boolean isMini) {
+    if (info == null) {
+      return null;
+    }
+
+    Map<String,Object> result = boxResourceInfoToMap(info);
+
+    result.put("name", info.getName());
+    result.put("login", info.getLogin());
+    if (!isMini) {
+      result.put("createdAt", info.getCreatedAt());
+      result.put("modifiedAt", info.getModifiedAt());
+    }
+
+    return result;
+  }
+
+  protected Map<String,Object> boxUserInfoToMap(BoxUser.Info info, boolean isMini) {
+    if (info == null) {
+      return null;
+    }
+
+    Map<String,Object> result = boxCollaboratorInfoToMap(info, isMini);
+
+    if (!isMini) {
+      result.put("status", String.valueOf(info.getStatus()));
+      // TODO: Are there other important user fields?
+    }
+
+    return result;
   }
 
   public Map<String, Object> createFolder(String parentFolderId, String folderName) throws IOException {
@@ -100,7 +257,7 @@ public class BoxService {
     // Add request diagnostics manually
     if (this.diagnostic.isEnabled()) {
       // Distinguish this request from any prior request (eg: pre-flight check)
-      this.diagnostic.nextStep();
+//      this.diagnostic.nextStep();
 
 //      this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_URL, url.toString());
 //      this.diagnostic.putRequestDiagnostic(DIAGNOSTIC_METHOD, "POST");
@@ -232,7 +389,7 @@ public class BoxService {
       return request.send();
     }
 
-    this.diagnostic.nextStep();
+//    this.diagnostic.nextStep();
 
     Long executionStartTime = System.currentTimeMillis();
 

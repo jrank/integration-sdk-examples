@@ -11,8 +11,8 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
 import com.appian.sdk.csp.box.LocalizableIntegrationError;
-import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 
 public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
 
@@ -62,7 +62,7 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
   IntegrationResponse createSuccessResponse(
     Map<String,Object> result,
     ExecutionContext executionContext,
-    MultiStepIntegrationDesignerDiagnostic diagnostic) {
+    BoxIntegrationDesignerDiagnostic diagnostic) {
 
     IntegrationDesignerDiagnostic responseDiagnostic = null;
     if (diagnostic.isEnabled()) {
@@ -81,7 +81,7 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
 
   IntegrationResponse createExceptionResponse(Exception e,
     ExecutionContext executionContext,
-    MultiStepIntegrationDesignerDiagnostic diagnostic) {
+    BoxIntegrationDesignerDiagnostic diagnostic) {
     LocalizableIntegrationError error = createExceptionError(e, diagnostic);
 
     IntegrationDesignerDiagnostic responseDiagnostic = null;
@@ -105,7 +105,7 @@ public abstract class AbstractIntegration extends SimpleIntegrationTemplate {
   private static final String DEFAULT_ERROR_TITLE = "error.default.title";
   private static final String DEFAULT_ERROR_DETAIL = "error.default.detail";
   private static final String EXCEPTION_STACKTRACE = "Exception";
-  LocalizableIntegrationError createExceptionError(Exception e, MultiStepIntegrationDesignerDiagnostic diagnostic) {
+  LocalizableIntegrationError createExceptionError(Exception e, BoxIntegrationDesignerDiagnostic diagnostic) {
     if (diagnostic.isEnabled()) {
       // Add the exception stacktrace to the response diagnostics
       StringWriter stackTrace = new StringWriter();

@@ -124,7 +124,7 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
     return BoxDeveloperEditionAPIConnection.getAppUserConnection(appUserID, boxConfig, accessTokenCache);
   }
 
-  public static void addRequestDiagnostics(Map<String,Object> requestDiagnostic, SimpleConfiguration connectedSystemConfiguration,
+  public static void addRequestDiagnostic(Map<String,Object> requestDiagnostic, SimpleConfiguration connectedSystemConfiguration,
     ExecutionContext executionContext) {
 
     boolean debug = Boolean.TRUE.equals(connectedSystemConfiguration.getValue(DEBUG));

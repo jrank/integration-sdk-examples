@@ -7,10 +7,10 @@ import java.util.Map;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
+import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.appian.sdk.csp.box.BoxService;
 import com.appian.sdk.csp.box.LocalizableIntegrationError;
-import com.appian.sdk.csp.box.MultiStepIntegrationDesignerDiagnostic;
 import com.box.sdk.BoxAPIException;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -19,20 +19,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public abstract class AbstractBoxIntegration extends AbstractIntegration {
 
   private BoxService boxService;
-  BoxService getService(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext, MultiStepIntegrationDesignerDiagnostic diagnostics) {
+  BoxService getService(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext, BoxIntegrationDesignerDiagnostic diagnostic) {
     if (this.boxService == null) {
-      BoxPlatformConnectedSystem.addRequestDiagnostics(diagnostics.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
+      BoxPlatformConnectedSystem.addRequestDiagnostic(diagnostic.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
 
       // Get client from connected system
       BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
         connectedSystemConfiguration, executionContext);
 
-      this.boxService = new BoxService(conn, diagnostics);
+      this.boxService = new BoxService(conn, diagnostic);
     }
     return boxService;
   }
 
-  IntegrationResponse createSuccessResponse(Map<String,Object> result, ExecutionContext executionContext, MultiStepIntegrationDesignerDiagnostic diagnostic) {
+  IntegrationResponse createSuccessResponse(Map<String,Object> result, ExecutionContext executionContext, BoxIntegrationDesignerDiagnostic diagnostic) {
     return super.createSuccessResponse(
       result,
       executionContext,
@@ -40,7 +40,7 @@ public abstract class AbstractBoxIntegration extends AbstractIntegration {
     );
   }
 
-  public IntegrationResponse createExceptionResponse(Exception e, ExecutionContext executionContext, MultiStepIntegrationDesignerDiagnostic diagnostic) {
+  public IntegrationResponse createExceptionResponse(Exception e, ExecutionContext executionContext, BoxIntegrationDesignerDiagnostic diagnostic) {
     return super.createExceptionResponse(
       e,
       executionContext,
@@ -52,7 +52,7 @@ public abstract class AbstractBoxIntegration extends AbstractIntegration {
   private static final String BOX_ERROR_DETAIL = "error.box.detail";
   private static final String BOX_ERROR_DETAIL_WITH_URL = "error.box.detailWithUrl";
   @Override
-  LocalizableIntegrationError createExceptionError(Exception e, MultiStepIntegrationDesignerDiagnostic diagnostic) {
+  LocalizableIntegrationError createExceptionError(Exception e, BoxIntegrationDesignerDiagnostic diagnostic) {
     if (e instanceof BoxAPIException) {
 
       BoxAPIException ex = (BoxAPIException)e;
