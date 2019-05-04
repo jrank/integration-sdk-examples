@@ -1,17 +1,23 @@
 package com.appian.sdk.csp.box.integration;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
+import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
+import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.appian.sdk.csp.box.BoxService;
+import com.box.sdk.BoxDeveloperEditionAPIConnection;
+import com.box.sdk.BoxUser;
 
 @TemplateId(name="UploadFile")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -19,6 +25,10 @@ public class UploadFile extends AbstractBoxIntegration {
 
   public static final int CHUNKED_UPLOAD_MINIMUM = 20000;
 
+//  public static final String USER_TYPE = "userType";
+//  public static final String USER_TYPE_APP = "userTypeApp";
+//  public static final String USER_TYPE_USER = "userTypeUser";
+  public static final String USER_ID = "userId";
   public static final String DOCUMENT = "document";
   public static final String FILE_NAME = "fileName";
   public static final String PARENT_FOLDER_ID = "parentFolderID";
@@ -30,10 +40,36 @@ public class UploadFile extends AbstractBoxIntegration {
     PropertyPath propertyPath,
     ExecutionContext executionContext) {
 
+    BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(connectedSystemConfiguration, executionContext);
+
+    List<Choice> connectAsChoices = new LinkedList<>();
+    BoxUser currentUser = BoxUser.getCurrentUser(conn);
+    connectAsChoices.add(Choice.builder().name("Connected System " + " (" + currentUser.getInfo().getName() + ", " + currentUser.getID() + ")").value(currentUser.getID()).build());
+    for (BoxUser.Info userInfo : BoxUser.getAllEnterpriseUsers(conn)) {
+      connectAsChoices.add(Choice.builder().name(userInfo.getName() + " (" + userInfo.getID() + ")").value(userInfo.getID()).build());
+    }
+
     SimpleConfiguration config = integrationConfiguration.setProperties(
+//      textProperty(USER_TYPE)
+//        .label("Connect As")
+//        .choices(
+//          Choice.builder().name("Application").value(USER_TYPE_APP).build(),
+//          Choice.builder().name("User").value(USER_TYPE_USER).build()
+//        )
+//        .instructionText("Select the type of identity to use")
+//        .isRequired(true)
+//        .refresh(RefreshPolicy.ALWAYS)
+//        .build(),
+      textProperty(USER_ID)
+        .label("Connect As")
+        .choices(connectAsChoices.toArray(new Choice[0]))
+        .instructionText("Lists user-owned documents instead of application-owned documents")
+        .isRequired(true)
+        .isExpressionable(true)
+        .build(),
       documentProperty(DOCUMENT)
         .label("Document")
-        .instructionText("The document to upload.")
+        .instructionText("The document to upload")
         .isRequired(true)
         .isExpressionable(true)
         .build(),
@@ -49,6 +85,10 @@ public class UploadFile extends AbstractBoxIntegration {
         .isExpressionable(true)
         .build()
     );
+
+    if (integrationConfiguration.getValue(USER_ID) == null) {
+      integrationConfiguration.setValue(USER_ID, currentUser.getID());
+    }
 
     return config;
   }
