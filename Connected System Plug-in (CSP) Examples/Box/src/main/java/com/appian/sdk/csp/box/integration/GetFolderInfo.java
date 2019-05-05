@@ -47,7 +47,7 @@ public class GetFolderInfo extends AbstractBoxIntegration {
     BoxIntegrationDesignerDiagnostic diagnostics = new BoxIntegrationDesignerDiagnostic(executionContext.isDiagnosticsEnabled());
 
     try {
-      BoxService service = getService(connectedSystemConfiguration, executionContext, diagnostics);
+      BoxService service = getService(connectedSystemConfiguration, integrationConfiguration, diagnostics);
 
       Map<String, Object> result = service.getFolderInfo(folderId);
 

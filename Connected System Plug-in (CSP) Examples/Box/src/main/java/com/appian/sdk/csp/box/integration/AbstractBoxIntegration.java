@@ -1,31 +1,108 @@
 package com.appian.sdk.csp.box.integration;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
+import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
+import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
+import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
 import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.appian.sdk.csp.box.BoxService;
 import com.appian.sdk.csp.box.LocalizableIntegrationError;
 import com.box.sdk.BoxAPIException;
 import com.box.sdk.BoxDeveloperEditionAPIConnection;
+import com.box.sdk.BoxFolder;
+import com.box.sdk.BoxItem;
+import com.box.sdk.BoxUser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public abstract class AbstractBoxIntegration extends AbstractIntegration {
 
+  public TextPropertyDescriptor boxUserIdProperty(SimpleConfiguration connectedSystemConfiguration) {
+    // TODO: Show a read-only field with the inherited service account identity if not using an app user
+    Choice[] appUserChoices = new Choice[0];
+    boolean runAsServiceAccount = BoxPlatformConnectedSystem.runAsServiceAccount(connectedSystemConfiguration);
+    if (!runAsServiceAccount) {
+      BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(connectedSystemConfiguration);
+
+      List<Choice> appUserChoicesList = new LinkedList<>();
+      for (BoxUser.Info userInfo : BoxUser.getAllEnterpriseUsers(conn)) {
+        appUserChoicesList.add(Choice.builder().name(userInfo.getName() + " (" + userInfo.getID() + ")").value(userInfo.getID()).build());
+      }
+      appUserChoices = appUserChoicesList.toArray(appUserChoices);
+    }
+
+    return textProperty(BoxPlatformConnectedSystem.APP_USER_ID)
+      .isHidden(runAsServiceAccount)
+      .label("Run As")
+      .choices(appUserChoices)
+      .description("The App User to run as. This value also determines which Box objects are shown in the configuration options below.")
+      .isRequired(!runAsServiceAccount)
+      .isExpressionable(true)
+      .refresh(RefreshPolicy.ALWAYS)
+      .build();
+  }
+
+  public TextPropertyDescriptor.TextPropertyDescriptorBuilder getBoxFolderBrowserPropertyBuilder(SimpleConfiguration connectedSystemConfiguration, SimpleConfiguration integrationConfiguration, String key) {
+    List<Choice> folderChoicesList = new LinkedList<>();
+    BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(connectedSystemConfiguration, integrationConfiguration);
+    String folderId = integrationConfiguration.getValue(key);
+    if (folderId == null) {
+      // Default to the root folder
+      folderId = BoxFolder.getRootFolder(conn).getID();
+      integrationConfiguration.setValue(key, folderId);
+    }
+
+    BoxFolder folder = new BoxFolder(conn, folderId);
+    BoxFolder.Info folderInfo = folder.getInfo();
+
+    // Add the current selection's parent folder
+    if (folderInfo.getParent() != null) {
+      folderChoicesList.add(Choice.builder()
+        .name("< " + folderInfo.getParent().getName() + " (" + folderInfo.getParent().getID() + ")")
+        .value(folderInfo.getParent().getID())
+        .build()
+      );
+    }
+
+    // Add the current selection
+    folderChoicesList.add(Choice.builder()
+      .name(folderInfo.getName() + " (" + folderInfo.getID() + ")")
+      .value(folderInfo.getID())
+      .build()
+    );
+
+    // Add the current selection's child folders
+    Iterable<BoxItem.Info> childItems = folder.getChildren("name");
+    for (BoxItem.Info childInfo : childItems) {
+      if ("folder".equals(childInfo.getType())) {
+        folderChoicesList.add(Choice.builder()
+          .name(folderInfo.getName() + " > " + childInfo.getName() + " (" + childInfo.getID() + ")")
+          .value(childInfo.getID())
+          .build()
+        );
+      }
+    }
+
+    return textProperty(key)
+      .choices(folderChoicesList.toArray(new Choice[0]))
+      .refresh(RefreshPolicy.ALWAYS);
+  }
+
   private BoxService boxService;
-  BoxService getService(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext, BoxIntegrationDesignerDiagnostic diagnostic) {
+  BoxService getService(SimpleConfiguration connectedSystemConfiguration, SimpleConfiguration integrationConfiguration, BoxIntegrationDesignerDiagnostic diagnostic) {
     if (this.boxService == null) {
-      BoxPlatformConnectedSystem.addRequestDiagnostic(diagnostic.getRequestDiagnostics(), connectedSystemConfiguration, executionContext);
+      BoxPlatformConnectedSystem.addRequestDiagnostic(diagnostic.getRequestDiagnostics(), connectedSystemConfiguration, integrationConfiguration);
 
       // Get client from connected system
-      BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(
-        connectedSystemConfiguration, executionContext);
+      BoxDeveloperEditionAPIConnection conn = BoxPlatformConnectedSystem.getConnection(connectedSystemConfiguration, integrationConfiguration);
 
       this.boxService = new BoxService(conn, diagnostic);
     }
