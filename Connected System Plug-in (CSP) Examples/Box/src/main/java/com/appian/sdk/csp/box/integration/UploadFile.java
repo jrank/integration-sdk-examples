@@ -1,25 +1,17 @@
 package com.appian.sdk.csp.box.integration;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
-import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
-import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.sdk.csp.box.BoxIntegrationDesignerDiagnostic;
-import com.appian.sdk.csp.box.BoxPlatformConnectedSystem;
 import com.appian.sdk.csp.box.BoxService;
-import com.box.sdk.BoxDeveloperEditionAPIConnection;
-import com.box.sdk.BoxFolder;
-import com.box.sdk.BoxItem;
 
 @TemplateId(name="UploadFile")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -39,7 +31,6 @@ public class UploadFile extends AbstractBoxIntegration {
     ExecutionContext executionContext) {
 
     SimpleConfiguration config = integrationConfiguration.setProperties(
-      boxUserIdProperty(connectedSystemConfiguration),
       documentProperty(DOCUMENT)
         .label("Document")
         .instructionText("The document to upload")
@@ -51,7 +42,7 @@ public class UploadFile extends AbstractBoxIntegration {
         .instructionText("The desired name for the file. If blank the name of the document will be used. Box supports file names of 255 characters or less. Names cannot contain non-printable ASCII characters, \"/\" or \"\\\", names with trailing spaces, or the special names '.' and '..'.")
         .isExpressionable(true)
         .build(),
-      getBoxFolderBrowserPropertyBuilder(connectedSystemConfiguration, integrationConfiguration, FOLDER_ID)
+      getBoxFolderBrowserPropertyBuilder(connectedSystemConfiguration, integrationConfiguration, propertyPath, FOLDER_ID)
         .label("Destination Folder")
         .instructionText("The destination folder for the file")
         .isRequired(true)

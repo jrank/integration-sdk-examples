@@ -26,9 +26,6 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
   public static final String PRIVATE_KEY = "privateKey";
   public static final String PRIVATE_KEY_PASSPHRASE = "passphrase";
   public static final String ENTERPRISE_ID = "enterpriseID";
-  public static final String USER_TYPE = "userType";
-  public static final String USER_TYPE_SERVICE_ACCOUNT_USER = "userTypeServiceAccountUser";
-  public static final String USER_TYPE_APP_USER = "userTypeAppUser";
   public static final String APP_USER_ID = "appUserId";
   public static final String DEBUG = "debug";
 
@@ -71,14 +68,11 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
         .isRequired(true)
         .isImportCustomizable(true)
         .build(),
-      textProperty(USER_TYPE)
-        .label("Run As")
-        .choices(
-          Choice.builder().name("All integrations will run as the Service Account associated with this application").value(USER_TYPE_SERVICE_ACCOUNT_USER).build(),
-          Choice.builder().name("Each integration will select an App User to run as").value(USER_TYPE_APP_USER).build()
-        )
-        .instructionText("See https://developer.box.com/docs/user-types and https://developer.box.com/docs/service-account for more information")
-        .isRequired(true)
+      textProperty(APP_USER_ID)
+        .label("App User ID")
+        .instructionText("(Optional) If provided, all integrations will run as the given App User instead of as the enterprise Service Account. See https://developer.box.com/docs/user-types and https://developer.box.com/docs/service-account for more information.")
+        .isRequired(false)
+        .isImportCustomizable(true)
         .build(),
       booleanProperty(DEBUG)
         .label("Debug")
@@ -97,29 +91,26 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
       BoxFolder rootFolder = BoxFolder.getRootFolder(conn);
       rootFolder.getInfo();
     } catch (Exception e) {
-      TestConnectionResult.error(e.getMessage());
+      return TestConnectionResult.error(e.getMessage());
     }
 
     return TestConnectionResult.success();
   }
 
-  public static boolean runAsServiceAccount(SimpleConfiguration connectedSystemConfiguration) {
-    String userType = connectedSystemConfiguration.getValue(BoxPlatformConnectedSystem.USER_TYPE);
-    return BoxPlatformConnectedSystem.USER_TYPE_SERVICE_ACCOUNT_USER.equals(userType);
-  }
-
-  public static BoxDeveloperEditionAPIConnection getConnection(SimpleConfiguration connectedSystemConfiguration, SimpleConfiguration integrationConfiguration) {
-    if (runAsServiceAccount(connectedSystemConfiguration)) {
-      return getConnection(connectedSystemConfiguration);
-    }
-
-    String appUserId = integrationConfiguration.getValue(APP_USER_ID);
-
-    return BoxDeveloperEditionAPIConnection.getAppUserConnection(appUserId, getBoxConfig(connectedSystemConfiguration), getAccessTokenCache());
+  protected static boolean runAsServiceAccount(SimpleConfiguration connectedSystemConfiguration) {
+    String appUserId = connectedSystemConfiguration.getValue(APP_USER_ID);
+    return appUserId == null;
   }
 
   public static BoxDeveloperEditionAPIConnection getConnection(SimpleConfiguration connectedSystemConfiguration) {
-    return BoxDeveloperEditionAPIConnection.getAppEnterpriseConnection(getBoxConfig(connectedSystemConfiguration), getAccessTokenCache());
+    if (runAsServiceAccount(connectedSystemConfiguration)) {
+      // Run as a service account
+      return BoxDeveloperEditionAPIConnection.getAppEnterpriseConnection(getBoxConfig(connectedSystemConfiguration), getAccessTokenCache());
+    } else {
+      // Run as an app user
+      String appUserId = connectedSystemConfiguration.getValue(APP_USER_ID);
+      return BoxDeveloperEditionAPIConnection.getAppUserConnection(appUserId, getBoxConfig(connectedSystemConfiguration), getAccessTokenCache());
+    }
   }
 
   protected static BoxConfig getBoxConfig(SimpleConfiguration connectedSystemConfiguration) {
@@ -163,11 +154,12 @@ public class BoxPlatformConnectedSystem extends SimpleTestableConnectedSystemTem
 //    requestDiagnostic.put("Enterprise ID", connectedSystemConfiguration.getValue(ENTERPRISE_ID));
 //    requestDiagnostic.put("App User ID", integrationConfiguration.getValue(APP_USER_ID));
 
+    BoxDeveloperEditionAPIConnection conn = getConnection(connectedSystemConfiguration);
+    BoxUser currentUser = BoxUser.getCurrentUser(conn);
     if (runAsServiceAccount(connectedSystemConfiguration)) {
-      BoxDeveloperEditionAPIConnection conn = getConnection(connectedSystemConfiguration);
-      requestDiagnostic.put("Run As", "Service Account " + BoxUser.getCurrentUser(conn).getID());
+      requestDiagnostic.put("Run As", "Service Account " + currentUser.getID());
     } else {
-      requestDiagnostic.put("Run As", "App User " + integrationConfiguration.getValue(APP_USER_ID));
+      requestDiagnostic.put("Run As", "App User " + currentUser.getID());
     }
   }
 }
